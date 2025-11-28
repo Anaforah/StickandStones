@@ -1,0 +1,137 @@
+[gd_scene load_steps=10 format=3 uid="uid://bh1uemrm3v7ww"]
+
+[ext_resource type="Texture2D" uid="uid://dximoscim5bcn" path="res://scenario.png" id="1_0p530"]
+[ext_resource type="Script" uid="uid://cdfuhp3gphh4" path="res://character_body_2d.gd" id="2_bmpdm"]
+[ext_resource type="Texture2D" uid="uid://covev3p733w7v" path="res://character.svg" id="2_cwpiv"]
+[ext_resource type="Texture2D" uid="uid://dkwm7qak03d36" path="res://pedra.svg" id="4_fklsw"]
+[ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_s7a3y"]
+[ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_a05x2"]
+
+[sub_resource type="Animation" id="Animation_p3jsh"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("..:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(-1.75, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("..:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(-300, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_bmpdm"]
+resource_name = "down"
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("..:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(-1.75, -0.25, 0, 0.25, 0, -1.75, -0.16666667, 0, 0, 0),
+"times": PackedFloat32Array(0, 1)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("..:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(-300, -0.25, 0, 0.25, 0, 300, -0.16666667, -100, 0, 0),
+"times": PackedFloat32Array(0, 1)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_s7a3y"]
+_data = {
+&"RESET": SubResource("Animation_p3jsh"),
+&"down": SubResource("Animation_bmpdm")
+}
+
+[node name="scenario" type="Node2D"]
+scale = Vector2(3, 3)
+metadata/_edit_horizontal_guides_ = [-41.0]
+
+[node name="Scenario" type="Sprite2D" parent="."]
+position = Vector2(197.54022, 112.06598)
+scale = Vector2(0.22626628, 0.22545597)
+texture = ExtResource("1_0p530")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="AnimationPlayer"]
+position = Vector2(-1.75, -300)
+script = ExtResource("2_bmpdm")
+
+[node name="Sprite2D" type="Sprite2D" parent="AnimationPlayer/CharacterBody2D"]
+position = Vector2(227, 120)
+scale = Vector2(0.768, 0.818)
+texture = ExtResource("2_cwpiv")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer/CharacterBody2D"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="AnimationPlayer/CharacterBody2D"]
+root_node = NodePath("../Sprite2D")
+libraries = {
+&"": SubResource("AnimationLibrary_s7a3y")
+}
+
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="."]
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="AnimationPlayer2"]
+position = Vector2(-1.75, -300)
+script = ExtResource("2_bmpdm")
+
+[node name="Sprite2D" type="Sprite2D" parent="AnimationPlayer2/CharacterBody2D"]
+position = Vector2(943.75, 119)
+scale = Vector2(0.768, 0.818)
+texture = ExtResource("2_cwpiv")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer2/CharacterBody2D"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="AnimationPlayer2/CharacterBody2D"]
+root_node = NodePath("../Sprite2D")
+libraries = {
+&"": SubResource("AnimationLibrary_s7a3y")
+}
+
+[node name="ObjectRock" type="Node2D" parent="."]
+script = ExtResource("4_s7a3y")
+
+[node name="rock" type="Sprite2D" parent="ObjectRock"]
+position = Vector2(48.999992, 187)
+scale = Vector2(0.5630081, 0.52798986)
+texture = ExtResource("4_fklsw")
+
+[node name="roleta" type="Sprite2D" parent="ObjectRock"]
+position = Vector2(-42.33336, -57.333344)
+scale = Vector2(0.11588541, 0.11914064)
+texture = ExtResource("6_a05x2")
+
+[node name="ObjectRock2" type="Node2D" parent="."]
+script = ExtResource("4_s7a3y")
+
+[node name="rock" type="Sprite2D" parent="ObjectRock2"]
+position = Vector2(350.33334, 187)
+scale = Vector2(0.5630081, 0.52798986)
+texture = ExtResource("4_fklsw")
+
+[node name="roleta" type="Sprite2D" parent="ObjectRock2"]
+position = Vector2(-42.33336, -57.333344)
+scale = Vector2(0.11588541, 0.11914064)
+texture = ExtResource("6_a05x2")
