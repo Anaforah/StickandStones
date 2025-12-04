@@ -1,11 +1,12 @@
-[gd_scene load_steps=10 format=3 uid="uid://bh1uemrm3v7ww"]
+[gd_scene load_steps=11 format=3 uid="uid://bh1uemrm3v7ww"]
 
-[ext_resource type="Texture2D" uid="uid://dximoscim5bcn" path="res://scenario.png" id="1_0p530"]
+[ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cdfuhp3gphh4" path="res://character_body_2d.gd" id="2_bmpdm"]
-[ext_resource type="Texture2D" uid="uid://covev3p733w7v" path="res://character.svg" id="2_cwpiv"]
-[ext_resource type="Texture2D" uid="uid://dkwm7qak03d36" path="res://pedra.svg" id="4_fklsw"]
+[ext_resource type="Texture2D" uid="uid://bwymi5bom7h4f" path="res://Imagens/Man.png" id="3_6dm4g"]
 [ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_s7a3y"]
+[ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
 [ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_a05x2"]
+[ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
 
 [sub_resource type="Animation" id="Animation_p3jsh"]
 length = 0.001
@@ -68,9 +69,9 @@ scale = Vector2(3, 3)
 metadata/_edit_horizontal_guides_ = [-41.0]
 
 [node name="Scenario" type="Sprite2D" parent="."]
-position = Vector2(197.54022, 112.06598)
-scale = Vector2(0.22626628, 0.22545597)
-texture = ExtResource("1_0p530")
+position = Vector2(213.85606, 120.25)
+scale = Vector2(0.22379528, 0.22299385)
+texture = ExtResource("1_fklsw")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
@@ -79,9 +80,9 @@ position = Vector2(-1.75, -300)
 script = ExtResource("2_bmpdm")
 
 [node name="Sprite2D" type="Sprite2D" parent="AnimationPlayer/CharacterBody2D"]
-position = Vector2(227, 120)
-scale = Vector2(0.768, 0.818)
-texture = ExtResource("2_cwpiv")
+position = Vector2(139.75, 106)
+scale = Vector2(0.2812334, 0.29954287)
+texture = ExtResource("3_6dm4g")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer/CharacterBody2D"]
 
@@ -98,9 +99,9 @@ position = Vector2(-1.75, -300)
 script = ExtResource("2_bmpdm")
 
 [node name="Sprite2D" type="Sprite2D" parent="AnimationPlayer2/CharacterBody2D"]
-position = Vector2(943.75, 119)
-scale = Vector2(0.768, 0.818)
-texture = ExtResource("2_cwpiv")
+position = Vector2(1126.75, 105)
+scale = Vector2(0.27950785, 0.29770496)
+texture = ExtResource("3_6dm4g")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer2/CharacterBody2D"]
 
@@ -114,24 +115,35 @@ libraries = {
 script = ExtResource("4_s7a3y")
 
 [node name="rock" type="Sprite2D" parent="ObjectRock"]
-position = Vector2(48.999992, 187)
-scale = Vector2(0.5630081, 0.52798986)
-texture = ExtResource("4_fklsw")
+position = Vector2(42.333332, 208.66669)
+scale = Vector2(0.08331547, 0.07813338)
+texture = ExtResource("5_a05x2")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock"]
 position = Vector2(-42.33336, -57.333344)
 scale = Vector2(0.11588541, 0.11914064)
 texture = ExtResource("6_a05x2")
 
+[node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock"]
+volume_db = 10.097
+
 [node name="ObjectRock2" type="Node2D" parent="."]
 script = ExtResource("4_s7a3y")
 
 [node name="rock" type="Sprite2D" parent="ObjectRock2"]
-position = Vector2(350.33334, 187)
-scale = Vector2(0.5630081, 0.52798986)
-texture = ExtResource("4_fklsw")
+position = Vector2(384.6667, 207.66667)
+scale = Vector2(0.0865528, 0.081169344)
+texture = ExtResource("5_a05x2")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock2"]
 position = Vector2(-42.33336, -57.333344)
 scale = Vector2(0.11588541, 0.11914064)
 texture = ExtResource("6_a05x2")
+
+[node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock2"]
+volume_db = 10.097
+
+[node name="Ambient sound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_6dm4g")
+volume_db = -15.0
+autoplay = true

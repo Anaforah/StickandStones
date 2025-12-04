@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://deg7m4hwkihw7"
+path="res://.godot/imported/Door Inch sound-effect-2294.mp3-430bb01fba73f336ef8c57205995f609.mp3str"
+
+[deps]
+
+source_file="res://Sons/Objetos/Door Inch sound-effect-2294.mp3"
+dest_files=["res://.godot/imported/Door Inch sound-effect-2294.mp3-430bb01fba73f336ef8c57205995f609.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -2,13 +2,20 @@ extends Node2D
 
 @onready var sprite_left: Sprite2D = $rock
 @onready var sprite_right: Sprite2D = $roleta
+@onready var switch_sound: AudioStreamPlayer2D = $switch_sound
 
 var dragging := false
-var switched := false  # controla se a troca já aconteceu
-var side := ""        # lado inicial do sprite: "left" ou "right"
+var switched := false
+var side := ""
+
+var achievement_sounds: Array[AudioStream] = []
+
 
 func _ready():
-	# Detecta automaticamente em qual lado o sprite_left está
+	# Carrega todos os sons da pasta achievement
+	_load_achievement_sounds()
+	
+	# Detecta automaticamente o lado inicial do sprite_left
 	var screen_width = get_viewport_rect().size.x
 	if sprite_left.global_position.x < screen_width / 2:
 		side = "left"
@@ -17,6 +24,19 @@ func _ready():
 	
 	sprite_left.visible = true
 	sprite_right.visible = false
+
+
+func _load_achievement_sounds():
+	var dir := DirAccess.open("res://Sons/Achievement")
+	if dir:
+		for file_name in dir.get_files():
+			if file_name.ends_with(".wav") or file_name.ends_with(".ogg") or file_name.ends_with(".mp3"):
+				var sound: AudioStream = load("res://Sons/Achievement/" + file_name)
+				if sound:
+					achievement_sounds.append(sound)
+	else:
+		push_error("⚠ ERRO: Pasta res://Sons/Achievement/ não encontrada!")
+
 
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -27,31 +47,39 @@ func _input(event):
 		else:
 			dragging = false
 
-func _process(delta):
+
+func _process(_delta):
 	if dragging:
 		var mouse_pos = get_global_mouse_position()
 		
 		if not switched:
-			# Arrasta o sprite visível normalmente
-			sprite_left.global_position = mouse_pos if sprite_left.visible else sprite_right.global_position
+			# Movimento normal antes da troca
+			if sprite_left.visible:
+				sprite_left.global_position = mouse_pos
+			else:
+				sprite_right.global_position = mouse_pos
+			
 			_check_switch(mouse_pos)
 		else:
-			# Depois de trocar, limita o movimento ao lado correspondente
+			# Depois da troca: bloquear movimento do outro lado
 			var screen_width = get_viewport_rect().size.x
+
 			if side == "left":
-				# Sprite inicial à esquerda: depois de troca, travado no lado direito
 				mouse_pos.x = max(screen_width / 2, mouse_pos.x)
 			else:
-				# Sprite inicial à direita: depois de troca, travado no lado esquerdo
 				mouse_pos.x = min(screen_width / 2, mouse_pos.x)
-			
+
 			if sprite_right.visible:
 				sprite_right.global_position = mouse_pos
 			else:
 				sprite_left.global_position = mouse_pos
 
+
 func _check_switch(mouse_pos: Vector2) -> void:
 	var screen_width = get_viewport_rect().size.x
+
+	if switched:
+		return  # nunca troca duas vezes
 
 	if sprite_left.visible:
 		if side == "left" and mouse_pos.x >= screen_width / 2:
@@ -59,16 +87,22 @@ func _check_switch(mouse_pos: Vector2) -> void:
 		elif side == "right" and mouse_pos.x <= screen_width / 2:
 			_do_switch()
 
+
 func _do_switch() -> void:
 	var current_pos = (sprite_left if sprite_left.visible else sprite_right).global_position
-	
+
 	sprite_left.visible = not sprite_left.visible
 	sprite_right.visible = not sprite_right.visible
-	
-	# Mantém posição do novo sprite
+
 	if sprite_left.visible:
 		sprite_left.global_position = current_pos
 	else:
 		sprite_right.global_position = current_pos
-	
+
 	switched = true
+
+	# 🔊 SOM RANDOM
+	if achievement_sounds.size() > 0:
+		var random_sound = achievement_sounds[randi() % achievement_sounds.size()]
+		switch_sound.stream = random_sound
+		switch_sound.play()

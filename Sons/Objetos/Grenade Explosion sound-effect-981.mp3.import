@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://ccr7bdyum5vd2"
+path="res://.godot/imported/Grenade Explosion sound-effect-981.mp3-859a09ee4b4208dc2143484150cb294c.mp3str"
+
+[deps]
+
+source_file="res://Sons/Objetos/Grenade Explosion sound-effect-981.mp3"
+dest_files=["res://.godot/imported/Grenade Explosion sound-effect-981.mp3-859a09ee4b4208dc2143484150cb294c.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
