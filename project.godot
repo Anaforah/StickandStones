@@ -15,6 +15,11 @@ run/main_scene="uid://bh1uemrm3v7ww"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+TelemetryManager="*res://telemetry_manager.gd"
+TelemetryAnalyzerUI="*res://telemetry_analyzer_ui.gd"
+
 [display]
 
 window/size/viewport_width=1280

@@ -8,16 +8,34 @@ var arrived := false
 # Texturas possíveis e índice atual (serão atribuídos pelo spawner)
 var object_textures: Array = []
 var tex_index := 0
+var object_name: String = ""  # Name of the object (drill, fireextinguisher, etc)
 
 # Dragging
 var dragging := false
 var drag_offset := Vector2.ZERO
 var prev_side_left := false
 
+# Telemetry
+var telemetry: TelemetryManager
+var grabbed_by_player: int = -1  # Track which player grabbed the item
+
 func _ready():
 	# inicializa prev_side_left com base na posição inicial
 	var screen_mid = get_viewport_rect().size.x / 2
 	prev_side_left = global_position.x < screen_mid
+	
+	# Get telemetry reference
+	telemetry = get_tree().root.get_child(0).get_node_or_null("TelemetryManager")
+	if telemetry == null:
+		telemetry = get_node_or_null("/root/TelemetryManager")
+	
+	# Log object spawn
+	if telemetry and object_name:
+		# Determine which player is closest
+		var closest_player = 1
+		if telemetry.player_positions[2].distance_to(global_position) < telemetry.player_positions[1].distance_to(global_position):
+			closest_player = 2
+		telemetry.log_event(closest_player, "objectSpawn", object_name)
 
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -25,6 +43,14 @@ func _input(event):
 			if sprite.get_rect().has_point(sprite.to_local(event.position)):
 				dragging = true
 				drag_offset = global_position - event.position
+				
+				# Determine which player grabbed it
+				grabbed_by_player = _get_closest_player()
+				
+				# Log grab action
+				if telemetry and grabbed_by_player > 0:
+					telemetry.log_action(grabbed_by_player, "grab", object_name)
+					telemetry.log_state(grabbed_by_player, object_name, "")
 		else:
 			dragging = false
 
@@ -48,6 +74,25 @@ func _process(delta):
 	if not arrived and target_position:
 		# Move apenas na vertical para garantir queda reta (x preservado)
 		var vertical_target = Vector2(global_position.x, target_position.y)
+		global_position = global_position.move_toward(vertical_target, fall_speed * delta)
+		if abs(global_position.y - target_position.y) < 10:
+			# Para no destino vertical e permanece (não é removido)
+			global_position.y = target_position.y
+			arrived = true
+
+## Get the closest player to this item
+func _get_closest_player() -> int:
+	if not telemetry:
+		return 1
+	
+	var dist_p1 = telemetry.player_positions[1].distance_to(global_position)
+	var dist_p2 = telemetry.player_positions[2].distance_to(global_position)
+	
+	return 1 if dist_p1 < dist_p2 else 2
+
+## Set object name and log spawn
+func set_object_name(name: String) -> void:
+	object_name = name
 		global_position = global_position.move_toward(vertical_target, fall_speed * delta)
 		if abs(global_position.y - target_position.y) < 10:
 			# Para no destino vertical e permanece (não é removido)
