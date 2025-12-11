@@ -5,14 +5,13 @@ extends Node
 ## 
 ## Format: playerID, posX, posY, health, stateVars, sceneID, playerCount, datetime, eventType, eventName, payload
 
-class_name TelemetryManager
-
-# Telemetry file path
-var telemetry_file_path: String = "user://telemetry_log.csv"
+# Telemetry file path - automatically creates new file for each session
+# Saves to TEST-DATA-CSV folder with timestamp in filename
+# Example: "res://TEST-DATA-CSV/Test_20251211_143022.csv"
+var telemetry_file_path: String = ""
 var telemetry_file: FileAccess
 
 # Current session data
-var player_id: int = 0
 var session_start_time: int = 0
 var is_recording: bool = false
 
@@ -23,6 +22,17 @@ var player_state_vars: Dictionary = {1: "none", 2: "none"}
 
 func _ready():
 	session_start_time = Time.get_ticks_msec()
+	# Generate unique filename with timestamp
+	var time_dict = Time.get_datetime_dict_from_system()
+	var timestamp = "%04d%02d%02d_%02d%02d%02d" % [
+		time_dict.year,
+		time_dict.month,
+		time_dict.day,
+		time_dict.hour,
+		time_dict.minute,
+		time_dict.second
+	]
+	telemetry_file_path = "res://TEST-DATA-CSV/Test_%s.csv" % timestamp
 	initialize_telemetry()
 	if not is_recording:
 		start_recording()
@@ -130,19 +140,15 @@ func _log_event(player_id: int, event_type: String, event_name: String, payload:
 	# Write to file
 	telemetry_file.store_string(csv_line)
 
-## Update player position (call from player scripts)
 func update_player_position(player_id: int, position: Vector2) -> void:
 	player_positions[player_id] = position
 
-## Update player health (call from player scripts)
 func update_player_health(player_id: int, health: int) -> void:
 	player_health[player_id] = health
 
-## Get telemetry file path (for debugging/inspection)
 func get_telemetry_file_path() -> String:
 	return telemetry_file_path
 
-## Close telemetry file properly
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		if telemetry_file:

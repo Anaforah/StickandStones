@@ -17,8 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-TelemetryManager="*res://telemetry_manager.gd"
-TelemetryAnalyzerUI="*res://telemetry_analyzer_ui.gd"
+TelemetryManager="*res://Telemetry/telemetry_manager.gd"
 
 [display]
 

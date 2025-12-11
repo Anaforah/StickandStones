@@ -4,16 +4,13 @@ const SPEED = 300.0
 const JUMP_VELOCITY = -400.0
 const PLAYER_ID = 1
 
-var telemetry: TelemetryManager
+var telemetry
 var health: int = 100
 var current_item: String = "none"
 
 func _ready():
-	# Get reference to telemetry manager (must be in scene or autoload)
-	telemetry = get_tree().root.get_child(0).get_node_or_null("TelemetryManager")
-	if telemetry == null:
-		# Try to find it in autoload
-		telemetry = get_node_or_null("/root/TelemetryManager")
+	# Get reference to telemetry manager (autoload)
+	telemetry = get_node_or_null("/root/TelemetryManager")
 	
 	# Log player spawn
 	if telemetry:

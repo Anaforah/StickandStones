@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetry Analysis - StickandStones</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .file-input-label:hover {
+            background: #764ba2;
+        }
+        
+        .file-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .file-item {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .file-item:hover {
+            background: #e0e0e0;
+        }
+        
+        .file-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #764ba2;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .timeline-container {
+            grid-column: 1 / -1;
+        }
+        
+        .chart-container {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        svg {
+            width: 100%;
+            height: auto;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .axis-label {
+            font-size: 12px;
+        }
+        
+        .legend {
+            font-size: 12px;
+            margin-top: 10px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .message {
+            padding: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            color: #856404;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Telemetry Analysis Dashboard</h1>
+        <p class="subtitle">Analise o progresso dos testes do StickandStones</p>
+        
+        <div id="loadedFiles" class="controls">
+            <strong>📁 Ficheiros Carregados:</strong>
+            <div id="fileList" class="file-list"></div>
+        </div>
+        
+        <div id="message" class="message" style="display:none;"></div>
+        
+        <div id="stats" class="stats"></div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">📊 Eventos por Tipo</div>
+                <svg id="eventTypeChart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">👥 Ações por Jogador</div>
+                <svg id="playerActionsChart"></svg>
+            </div>
+            
+            <div class="chart-container timeline-container">
+                <div class="chart-title">📈 Timeline de Eventos (Completa)</div>
+                <svg id="timelineChart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">🗺️ Posições dos Jogadores (Teste Atual)</div>
+                <svg id="positionsChart"></svg>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">💾 Objetos Interagidos</div>
+                <svg id="objectsChart"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colors = {
+            player1: '#667eea',
+            player2: '#764ba2',
+            action: '#10b981',
+            event: '#f59e0b',
+            state: '#ef4444'
+        };
+        
+        let allData = [];
+        let fileNames = [];
+
+        // Calcula métricas por ficheiro
+        function summarizeFile(data) {
+            const totalEvents = data.length;
+            const player1Events = data.filter(d => d.playerID === '1').length;
+            const player2Events = data.filter(d => d.playerID === '2').length;
+            const uniqueActions = new Set(data.map(d => d.eventName)).size;
+            const durationSeconds = getDurationSeconds(data);
+
+            // Contagens por tipo
+            const typeCounts = new Map();
+            data.forEach(d => {
+                const key = d.eventType || 'unknown';
+                typeCounts.set(key, (typeCounts.get(key) || 0) + 1);
+            });
+
+            // Contagens por jogador e tipo
+            const playerTypeCounts = new Map(); // key: `${playerID}:${type}`
+            data.forEach(d => {
+                const key = `${d.playerID || '?'}:${d.eventType || 'unknown'}`;
+                playerTypeCounts.set(key, (playerTypeCounts.get(key) || 0) + 1);
+            });
+
+            return {
+                totalEvents,
+                player1Events,
+                player2Events,
+                uniqueActions,
+                durationSeconds,
+                typeCounts,
+                playerTypeCounts,
+            };
+        }
+
+        function averageSummaries(summaryList) {
+            const n = summaryList.length;
+            if (n === 0) return null;
+            const accType = new Map();
+            const accPlayerType = new Map();
+            summaryList.forEach(s => {
+                s.typeCounts.forEach((v, k) => accType.set(k, (accType.get(k) || 0) + v));
+                s.playerTypeCounts.forEach((v, k) => accPlayerType.set(k, (accPlayerType.get(k) || 0) + v));
+            });
+            const avgType = new Map();
+            accType.forEach((v, k) => avgType.set(k, v / n));
+            const avgPlayerType = new Map();
+            accPlayerType.forEach((v, k) => avgPlayerType.set(k, v / n));
+
+            return {
+                totalEvents: summaryList.reduce((a, s) => a + s.totalEvents, 0) / n,
+                player1Events: summaryList.reduce((a, s) => a + s.player1Events, 0) / n,
+                player2Events: summaryList.reduce((a, s) => a + s.player2Events, 0) / n,
+                uniqueActions: summaryList.reduce((a, s) => a + s.uniqueActions, 0) / n,
+                durationSeconds: summaryList.reduce((a, s) => a + (s.durationSeconds ?? 0), 0) / n,
+                typeCounts: avgType,
+                playerTypeCounts: avgPlayerType,
+            };
+        }
+
+        // Converte string datetime (yyyyMMddHHmmss) para Date
+        function parseDateTime(dtStr) {
+            if (!dtStr || dtStr.length < 14) return null;
+            const year = parseInt(dtStr.slice(0, 4));
+            const month = parseInt(dtStr.slice(4, 6)) - 1;
+            const day = parseInt(dtStr.slice(6, 8));
+            const hour = parseInt(dtStr.slice(8, 10));
+            const minute = parseInt(dtStr.slice(10, 12));
+            const second = parseInt(dtStr.slice(12, 14));
+            const dateObj = new Date(year, month, day, hour, minute, second);
+            return isNaN(dateObj.getTime()) ? null : dateObj;
+        }
+
+        // Calcula duração em segundos entre primeiro e último evento
+        function getDurationSeconds(data) {
+            const times = data
+                .map(d => parseDateTime(d.datetime))
+                .filter(t => t !== null)
+                .map(t => t.getTime());
+            if (times.length < 2) return null;
+            const minT = Math.min(...times);
+            const maxT = Math.max(...times);
+            return Math.max(0, Math.round((maxT - minT) / 1000));
+        }
+
+        // Formata duração em h:mm:ss
+        function formatDuration(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            const mm = mins.toString().padStart(2, '0');
+            const ss = secs.toString().padStart(2, '0');
+            return hrs > 0 ? `${hrs}:${mm}:${ss}` : `${mins}:${ss}`;
+        }
+        
+        // Auto-load CSV files from current directory
+        async function loadCSVFiles() {
+            let csvFiles = [];
+            
+            // Estratégia 1: Tentar fetch do diretório
+            try {
+                const response = await fetch('.');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a');
+                
+                csvFiles = Array.from(links)
+                    .map(a => a.getAttribute('href'))
+                    .filter(href => href && href.endsWith('.csv'))
+                    .sort();
+                
+                console.log('Ficheiros CSV encontrados por fetch:', csvFiles);
+            } catch (e) {
+                console.log('Fetch do diretório falhou, tentando carregamento direto', e);
+            }
+            
+            // Estratégia 2: Se fetch falhou, tentar carregar ficheiros conhecidos
+            if (csvFiles.length === 0) {
+                const knownFiles = ['Test_1.csv', 'Test_20251211_202805.csv', 'Test_20251211_205926.csv', 'Test_20251211_205929.csv'];
+                for (const file of knownFiles) {
+                    try {
+                        const response = await fetch(file);
+                        if (response.ok) {
+                            csvFiles.push(file);
+                        }
+                    } catch (e) {
+                        // Continuar para o próximo ficheiro
+                    }
+                }
+                console.log('Ficheiros CSV carregáveis:', csvFiles);
+            }
+            
+            if (csvFiles.length === 0) {
+                showMessage('⚠️ Nenhum ficheiro CSV encontrado. Use o input abaixo para carregar manualmente.');
+                setupManualUpload();
+                return;
+            }
+            
+            showMessage(`⏳ Carregando ${csvFiles.length} ficheiro(s)...`);
+            
+            let loaded = 0;
+            for (const file of csvFiles) {
+                try {
+                    const data = await d3.csv(file);
+                    fileNames.push(file);
+                    allData.push({name: file, data: data});
+                    loaded++;
+                    console.log('Carregado:', file);
+                } catch (e) {
+                    console.log('Erro ao carregar ' + file, e);
+                }
+            }
+            
+            if (loaded > 0) {
+                updateFileList();
+                showMessage('');
+                // Se há múltiplos ficheiros, mostrar "All" por padrão
+                loadAndVisualize(fileNames.length > 1 ? 'all' : 0);
+            } else {
+                showMessage('⚠️ Erro ao carregar ficheiros CSV. Use o input abaixo para carregar manualmente.');
+                setupManualUpload();
+            }
+        }
+        
+        function setupManualUpload() {
+            const controls = document.getElementById('loadedFiles');
+            const uploadDiv = document.createElement('div');
+            uploadDiv.style.marginTop = '10px';
+            uploadDiv.className = 'file-input-wrapper';
+            
+            const label = document.createElement('label');
+            label.className = 'file-input-label';
+            label.textContent = '📁 Carregar CSV Manualmente';
+            
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.id = 'csvFile';
+            input.accept = '.csv';
+            input.multiple = true;
+            
+            uploadDiv.appendChild(label);
+            uploadDiv.appendChild(input);
+            controls.appendChild(uploadDiv);
+            
+            document.getElementById('csvFile').addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                fileNames = [];
+                allData = [];
+                
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const csv = event.target.result;
+                        const data = d3.csvParse(csv);
+                        
+                        fileNames.push(file.name);
+                        allData.push({name: file.name, data: data});
+                        
+                        updateFileList();
+                        if (fileNames.length === files.length) {
+                            loadAndVisualize(0);
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            });
+        }
+        
+        function updateFileList() {
+            const list = document.getElementById('fileList');
+            list.innerHTML = '';
+            
+            // Adicionar opção "All"
+            if (fileNames.length > 1) {
+                const allItem = document.createElement('div');
+                allItem.className = 'file-item active';
+                allItem.textContent = '📊 All (Agregado)';
+                allItem.onclick = () => loadAndVisualize('all');
+                list.appendChild(allItem);
+            }
+            
+            fileNames.forEach((name, idx) => {
+                const item = document.createElement('div');
+                item.className = 'file-item' + (fileNames.length > 1 ? '' : (idx === 0 ? ' active' : ''));
+                item.textContent = name;
+                item.onclick = () => loadAndVisualize(idx);
+                list.appendChild(item);
+            });
+        }
+        
+        function loadAndVisualize(index) {
+            // Atualizar UI dos ficheiros
+            const items = document.querySelectorAll('.file-item');
+            items.forEach((el, i) => {
+                if (index === 'all') {
+                    el.classList.toggle('active', i === 0);
+                } else {
+                    const itemIdx = fileNames.length > 1 ? i - 1 : i;
+                    el.classList.toggle('active', itemIdx === index);
+                }
+            });
+            
+            let currentData;
+            let summaryList = [];
+            
+            if (index === 'all') {
+                // Agregar dados de todos os ficheiros
+                currentData = [];
+                for (const file of allData) {
+                    currentData = currentData.concat(file.data);
+                    summaryList.push(summarizeFile(file.data));
+                }
+            } else {
+                currentData = allData[index].data;
+                summaryList.push(summarizeFile(currentData));
+            }
+            
+            if (!currentData || currentData.length === 0) {
+                showMessage('Nenhum dado disponível');
+                return;
+            }
+            
+            showMessage('');
+            const averages = summaryList.length > 1 ? averageSummaries(summaryList) : summaryList[0];
+            updateStats(currentData, averages);
+            drawEventTypeChart(currentData, averages);
+            drawPlayerActionsChart(currentData, averages);
+            drawTimelineChart(currentData, averages, summaryList.length > 1);
+            drawPositionsChart(currentData);
+            drawObjectsChart(currentData);
+        }
+        
+        function showMessage(text) {
+            const msg = document.getElementById('message');
+            if (text) {
+                msg.textContent = text;
+                msg.style.display = 'block';
+            } else {
+                msg.style.display = 'none';
+            }
+        }
+        
+        function updateStats(data, avg) {
+            const stats = document.getElementById('stats');
+            const useAvg = !!avg && avg.durationSeconds !== undefined;
+            const totalEvents = useAvg ? avg.totalEvents : data.length;
+            const player1Events = useAvg ? avg.player1Events : data.filter(d => d.playerID === '1').length;
+            const player2Events = useAvg ? avg.player2Events : data.filter(d => d.playerID === '2').length;
+            const uniqueActions = useAvg ? avg.uniqueActions : new Set(data.map(d => d.eventName)).size;
+            const durationSeconds = useAvg ? avg.durationSeconds : getDurationSeconds(data);
+            const durationText = durationSeconds !== null ? formatDuration(Math.round(durationSeconds)) : 'N/A';
+            const labelPrefix = useAvg ? 'Média ' : '';
+            
+            stats.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${durationText}</div>
+                    <div class="stat-label">${labelPrefix}Duração da Sessão</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${totalEvents.toFixed ? totalEvents.toFixed(1) : totalEvents}</div>
+                    <div class="stat-label">${labelPrefix}Total de Eventos</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${player1Events.toFixed ? player1Events.toFixed(1) : player1Events}</div>
+                    <div class="stat-label">${labelPrefix}Eventos Jogador 1</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${player2Events.toFixed ? player2Events.toFixed(1) : player2Events}</div>
+                    <div class="stat-label">${labelPrefix}Eventos Jogador 2</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${uniqueActions.toFixed ? uniqueActions.toFixed(1) : uniqueActions}</div>
+                    <div class="stat-label">${labelPrefix}Tipos de Ação</div>
+                </div>
+            `;
+        }
+
+        function drawEventTypeChart(data, avg) {
+            let chartData;
+            if (avg && avg.typeCounts) {
+                chartData = Array.from(avg.typeCounts, ([key, value]) => ({type: key, count: value}));
+            } else {
+                const eventTypes = d3.rollup(data, v => v.length, d => d.eventType);
+                chartData = Array.from(eventTypes, ([key, value]) => ({type: key, count: value}));
+            }
+
+            const svg = d3.select('#eventTypeChart');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().parentElement.offsetWidth - 40;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 30, left: 50};
+            
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            
+            const x = d3.scaleBand().domain(chartData.map(d => d.type)).range([margin.left, width - margin.right]).padding(0.3);
+            const yMax = d3.max(chartData, d => d.count) || 1;
+            const y = d3.scaleLinear().domain([0, yMax]).range([height - margin.bottom, margin.top]);
+            
+            svg.selectAll('.bar')
+                .data(chartData)
+                .join('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.type))
+                .attr('y', d => y(d.count))
+                .attr('width', x.bandwidth())
+                .attr('height', d => height - margin.bottom - y(d.count))
+                .attr('fill', d => {
+                    if (d.type === 'action') return colors.action;
+                    if (d.type === 'event') return colors.event;
+                    return colors.state;
+                });
+            
+            svg.append('g').attr('transform', `translate(0,${height - margin.bottom})`).call(d3.axisBottom(x));
+            svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        }
+        
+        function drawPlayerActionsChart(data, avg) {
+            let chartData;
+            const types = ['action', 'event', 'state'];
+            const players = ['1', '2'];
+            if (avg && avg.playerTypeCounts) {
+                chartData = [];
+                players.forEach(p => {
+                    types.forEach(t => {
+                        const key = `${p}:${t}`;
+                        chartData.push({ player: p, type: t, count: avg.playerTypeCounts.get(key) || 0 });
+                    });
+                });
+            } else {
+                const actions = d3.rollup(data, v => v.length, d => d.playerID, d => d.eventType);
+                chartData = [];
+                players.forEach(p => {
+                    types.forEach(t => {
+                        chartData.push({
+                            player: p,
+                            type: t,
+                            count: actions.get(p)?.get(t) || 0
+                        });
+                    });
+                });
+            }
+            
+            const svg = d3.select('#playerActionsChart');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().parentElement.offsetWidth - 40;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 30, left: 50};
+            
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            
+            const x = d3.scaleBand().domain(players).range([margin.left, width - margin.right]).padding(0.3);
+            const y = d3.scaleLinear().domain([0, d3.max(chartData, d => d.count)]).range([height - margin.bottom, margin.top]);
+            const x1 = d3.scaleBand().domain(types).range([0, x.bandwidth()]).padding(0.1);
+            
+            const svgGroups = svg.selectAll('g.layer')
+                .data(chartData)
+                .join('g')
+                .attr('class', 'layer')
+                .attr('transform', d => `translate(${x(d.player)},0)`);
+            
+            svgGroups.append('rect')
+                .attr('x', d => x1(d.type))
+                .attr('y', d => y(d.count))
+                .attr('width', x1.bandwidth())
+                .attr('height', d => height - margin.bottom - y(d.count))
+                .attr('fill', d => {
+                    if (d.type === 'action') return colors.action;
+                    if (d.type === 'event') return colors.event;
+                    return colors.state;
+                });
+            
+            svg.append('g').attr('transform', `translate(0,${height - margin.bottom})`).call(d3.axisBottom(x));
+            svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        }
+        
+        function drawTimelineChart(data, avg, isAll) {
+            const svg = d3.select('#timelineChart');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().parentElement.offsetWidth - 40;
+            const height = 450;
+            const margin = {top: 20, right: 20, bottom: 50, left: 60};
+            
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            
+            // Quando em All, construir timeline média por buckets normalizados
+            let eventCounts = [];
+            let totalMinutes = 0;
+            if (isAll) {
+                const buckets = 50;
+                const bucketSums = new Array(buckets).fill(0);
+                let avgDurationMinutes = 0;
+                let fileCount = allData.length;
+                allData.forEach(file => {
+                    const parsed = file.data.map(d => parseDateTime(d.datetime)).filter(t => t !== null);
+                    const hasTime = parsed.length >= 2;
+                    const minT = hasTime ? Math.min(...parsed.map(t => t.getTime())) : null;
+                    const maxT = hasTime ? Math.max(...parsed.map(t => t.getTime())) : null;
+                    const durationMin = hasTime ? Math.max(0.0001, (maxT - minT) / 60000) : Math.max(0.1, file.data.length / 10);
+                    avgDurationMinutes += durationMin;
+                    file.data.forEach((d, i) => {
+                        let progress;
+                        if (hasTime) {
+                            const dt = parseDateTime(d.datetime);
+                            progress = dt ? (dt.getTime() - minT) / (maxT - minT || 1) : i / Math.max(1, file.data.length - 1);
+                        } else {
+                            progress = i / Math.max(1, file.data.length - 1);
+                        }
+                        const b = Math.min(buckets - 1, Math.max(0, Math.floor(progress * (buckets - 1))));
+                        bucketSums[b] += 1;
+                    });
+                });
+                avgDurationMinutes = avgDurationMinutes / Math.max(1, fileCount);
+                totalMinutes = Math.max(0.01, avgDurationMinutes);
+                let cumulative = 0;
+                for (let i = 0; i < buckets; i++) {
+                    cumulative += bucketSums[i] / Math.max(1, fileCount);
+                    const time = (totalMinutes * i) / (buckets - 1);
+                    eventCounts.push({
+                        index: i,
+                        count: cumulative,
+                        time: time,
+                        type: 'avg',
+                        name: 'Média',
+                        playerID: '-',
+                        payload: ''
+                    });
+                }
+            } else {
+                // Calcular tempo real em minutos se houver timestamps, senão estimar
+                const parsedTimes = data
+                    .map(d => ({ raw: d.datetime, date: parseDateTime(d.datetime) }))
+                    .filter(t => t.date !== null);
+                const hasRealTime = parsedTimes.length >= 2;
+                const minTime = hasRealTime ? Math.min(...parsedTimes.map(t => t.date.getTime())) : null;
+                const maxTime = hasRealTime ? Math.max(...parsedTimes.map(t => t.date.getTime())) : null;
+                totalMinutes = hasRealTime
+                    ? Math.max(0.01, (maxTime - minTime) / 60000)
+                    : Math.max(0.1, data.length / 10); // fallback: 10 eventos por minuto
+                
+                data.forEach((d, i) => {
+                    let timeInMinutes;
+                    if (hasRealTime) {
+                        const dt = parseDateTime(d.datetime);
+                        timeInMinutes = dt ? (dt.getTime() - minTime) / 60000 : (i / data.length) * totalMinutes;
+                    } else {
+                        timeInMinutes = (i / data.length) * totalMinutes;
+                    }
+                    eventCounts.push({
+                        index: i,
+                        count: i + 1,
+                        time: timeInMinutes,
+                        type: d.eventType,
+                        name: d.eventName,
+                        playerID: d.playerID,
+                        payload: d.payload
+                    });
+                });
+            }
+            
+            const x = d3.scaleLinear()
+                .domain([0, totalMinutes])
+                .range([margin.left, width - margin.right]);
+            const y = d3.scaleLinear()
+                .domain([0, data.length])
+                .range([height - margin.bottom, margin.top]);
+            
+            // Criar tooltip
+            const tooltip = d3.select('body').append('div')
+                .style('position', 'absolute')
+                .style('background', '#333')
+                .style('color', 'white')
+                .style('padding', '8px 12px')
+                .style('border-radius', '4px')
+                .style('font-size', '11px')
+                .style('pointer-events', 'none')
+                .style('opacity', 0)
+                .style('z-index', 1000)
+                .style('max-width', '300px')
+                .style('word-wrap', 'break-word');
+            
+            svg.selectAll('.timeline-dot')
+                .data(eventCounts)
+                .join('circle')
+                .attr('class', 'timeline-dot')
+                .attr('cx', d => x(d.time))
+                .attr('cy', d => y(d.count))
+                .attr('r', 4)
+                .attr('fill', d => {
+                    if (d.type === 'action') return colors.action;
+                    if (d.type === 'event') return colors.event;
+                    return colors.state;
+                })
+                .attr('opacity', 0.7)
+                .on('mouseover', function(event, d) {
+                    d3.select(this)
+                        .attr('r', 6)
+                        .attr('opacity', 1);
+                    
+                    tooltip.style('opacity', 1)
+                        .html(`
+                            <strong>${d.name}</strong><br/>
+                            Tipo: ${d.type}<br/>
+                            Jogador: ${d.playerID}<br/>
+                            Tempo: ${d.time.toFixed(2)} min<br/>
+                            Evento: ${d.index + 1}/${data.length}<br/>
+                            ${d.payload ? 'Payload: ' + d.payload : ''}
+                        `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mousemove', function(event) {
+                    tooltip
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    d3.select(this)
+                        .attr('r', 4)
+                        .attr('opacity', 0.7);
+                    tooltip.style('opacity', 0);
+                });
+            
+            // Linha de tendência
+            const line = d3.line()
+                .x(d => x(d.time))
+                .y(d => y(d.count));
+            
+            svg.append('path')
+                .datum(eventCounts)
+                .attr('fill', 'none')
+                .attr('stroke', '#ccc')
+                .attr('stroke-width', 1)
+                .attr('opacity', 0.5)
+                .attr('d', line);
+            
+            svg.append('g')
+                .attr('transform', `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x).ticks(10).tickFormat(d => d.toFixed(1) + 'm'))
+                .append('text')
+                .attr('x', width / 2)
+                .attr('y', 40)
+                .attr('fill', 'black')
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .text(isAll ? 'Tempo Médio (Minutos)' : 'Tempo (Minutos)');
+            
+            svg.append('g')
+                .attr('transform', `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y).ticks(10))
+                .append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', 0 - margin.left)
+                .attr('x', 0 - height / 2)
+                .attr('dy', '1em')
+                .attr('fill', 'black')
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .text('Contagem Acumulada de Eventos');
+        }
+        
+        function drawPositionsChart(data) {
+            const svg = d3.select('#positionsChart');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().parentElement.offsetWidth - 40;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 30, left: 50};
+            
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            
+            const x = d3.scaleLinear().domain([0, 1280]).range([margin.left, width - margin.right]);
+            const y = d3.scaleLinear().domain([0, 720]).range([height - margin.bottom, margin.top]);
+            
+            // Player 1
+            svg.selectAll('.pos1')
+                .data(data.filter(d => d.playerID === '1'))
+                .join('circle')
+                .attr('class', 'pos1')
+                .attr('cx', d => x(parseFloat(d.posX)))
+                .attr('cy', d => y(parseFloat(d.posY)))
+                .attr('r', 2)
+                .attr('fill', colors.player1)
+                .attr('opacity', 0.5);
+            
+            // Player 2
+            svg.selectAll('.pos2')
+                .data(data.filter(d => d.playerID === '2'))
+                .join('circle')
+                .attr('class', 'pos2')
+                .attr('cx', d => x(parseFloat(d.posX)))
+                .attr('cy', d => y(parseFloat(d.posY)))
+                .attr('r', 2)
+                .attr('fill', colors.player2)
+                .attr('opacity', 0.5);
+            
+            svg.append('g').attr('transform', `translate(0,${height - margin.bottom})`).call(d3.axisBottom(x));
+            svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        }
+        
+        function drawObjectsChart(data) {
+            const objects = d3.rollup(data, v => v.length, d => d.payload);
+            const chartData = Array.from(objects, ([key, value]) => ({obj: key || 'unknown', count: value}))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8);
+            
+            const svg = d3.select('#objectsChart');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().parentElement.offsetWidth - 40;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 80, left: 50};
+            
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            
+            const x = d3.scaleBand().domain(chartData.map(d => d.obj)).range([margin.left, width - margin.right]).padding(0.3);
+            const y = d3.scaleLinear().domain([0, d3.max(chartData, d => d.count)]).range([height - margin.bottom, margin.top]);
+            
+            svg.selectAll('.bar')
+                .data(chartData)
+                .join('rect')
+                .attr('x', d => x(d.obj))
+                .attr('y', d => y(d.count))
+                .attr('width', x.bandwidth())
+                .attr('height', d => height - margin.bottom - y(d.count))
+                .attr('fill', colors.action);
+            
+            svg.append('g').attr('transform', `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x))
+                .selectAll('text')
+                .attr('transform', 'rotate(-45)')
+                .attr('text-anchor', 'end');
+            
+            svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        }
+        
+        // Carregar dados automaticamente ao abrir
+        window.addEventListener('load', function() {
+            loadCSVFiles();
+        });
+    </script>
+</body>
+</html>
