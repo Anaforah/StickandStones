@@ -1,10 +1,9 @@
-extends Node2D
+extends RigidBody2D
 
 @onready var sprite_left: Sprite2D = $rock
 @onready var sprite_right: Sprite2D = $roleta
 @onready var switch_sound: AudioStreamPlayer2D = $switch_sound
 
-var dragging := false
 var switched := false
 var side := ""
 
@@ -69,49 +68,12 @@ func _input(event):
 				dragging = true
 		else:
 			dragging = false
+# -----------------------------
+# MÉTODOS PÚBLICOS PARA SER CHAMADOS PELO PLAYER
+# -----------------------------
 
-
-func _process(_delta):
-	if dragging:
-		var mouse_pos = get_global_mouse_position()
-		
-		if not switched:
-			# Movimento normal antes da troca
-			if sprite_left.visible:
-				sprite_left.global_position = mouse_pos
-			else:
-				sprite_right.global_position = mouse_pos
-			
-			_check_switch(mouse_pos)
-		else:
-			# Depois da troca: bloquear movimento do outro lado
-			var screen_width = get_viewport_rect().size.x
-
-			if side == "left":
-				mouse_pos.x = max(screen_width / 2, mouse_pos.x)
-			else:
-				mouse_pos.x = min(screen_width / 2, mouse_pos.x)
-
-			if sprite_right.visible:
-				sprite_right.global_position = mouse_pos
-			else:
-				sprite_left.global_position = mouse_pos
-
-
-func _check_switch(mouse_pos: Vector2) -> void:
-	var screen_width = get_viewport_rect().size.x
-
-	if switched:
-		return  # nunca troca duas vezes
-
-	if sprite_left.visible:
-		if side == "left" and mouse_pos.x >= screen_width / 2:
-			_do_switch()
-		elif side == "right" and mouse_pos.x <= screen_width / 2:
-			_do_switch()
-
-
-func _do_switch() -> void:
+func do_switch():
+	# Troca os sprites e toca som
 	var current_pos = (sprite_left if sprite_left.visible else sprite_right).global_position
 
 	sprite_left.visible = not sprite_left.visible
@@ -124,7 +86,7 @@ func _do_switch() -> void:
 
 	switched = true
 
-	# 🔊 SOM RANDOM
+	# 🔊 toca som aleatório
 	if achievement_sounds.size() > 0:
 		var random_sound = achievement_sounds[randi() % achievement_sounds.size()]
 		switch_sound.stream = random_sound
@@ -250,3 +212,10 @@ func _spawn_single_item():
 		item.target_position = Vector2(sprite_right.global_position.x, sprite_right.global_position.y + 300)
 
 	# target_position já definido abaixo
+func move_to(new_pos: Vector2):
+	global_position = new_pos
+
+
+func set_visible_left(left_visible: bool):
+	sprite_left.visible = left_visible
+	sprite_right.visible = not left_visible

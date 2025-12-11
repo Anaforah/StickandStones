@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
 [ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
+[ext_resource type="Script" uid="uid://bjpk7hjpijjx3" path="res://rock.gd" id="7_67p4d"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a05x2"]
 size = Vector2(1919.9094, 56.802795)
@@ -78,8 +79,14 @@ _data = {
 &"down": SubResource("Animation_bmpdm")
 }
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_67p4d"]
+radius = 147.12239
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_03rl8"]
 size = Vector2(83.875, 288)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_a05x2"]
+radius = 29.734007
 
 [node name="scenario" type="Node2D"]
 scale = Vector2(3, 3)
@@ -127,6 +134,15 @@ libraries = {
 &"": SubResource("AnimationLibrary_s7a3y")
 }
 
+[node name="Range" type="Area2D" parent="AnimationPlayer/Player 1"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer/Player 1/Range"]
+position = Vector2(142.75, 114)
+shape = SubResource("CircleShape2D_67p4d")
+
+[node name="HandPosition" type="Marker2D" parent="AnimationPlayer/Player 1"]
+position = Vector2(219.75, 111)
+
 [node name="AnimationPlayer2" type="AnimationPlayer" parent="."]
 
 [node name="Player 2" type="CharacterBody2D" parent="AnimationPlayer2"]
@@ -148,13 +164,14 @@ libraries = {
 &"": SubResource("AnimationLibrary_s7a3y")
 }
 
-[node name="ObjectRock" type="Node2D" parent="."]
+[node name="ObjectRock" type="RigidBody2D" parent="." groups=["CanGrab"]]
 script = ExtResource("4_s7a3y")
 
 [node name="rock" type="Sprite2D" parent="ObjectRock"]
-position = Vector2(42.333332, 208.66669)
-scale = Vector2(0.08331547, 0.07813338)
+position = Vector2(42.333336, 208.66669)
+scale = Vector2(0.08331548, 0.07813339)
 texture = ExtResource("5_a05x2")
+script = ExtResource("7_67p4d")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock"]
 position = Vector2(-42.33336, -57.333344)
@@ -163,6 +180,10 @@ texture = ExtResource("6_a05x2")
 
 [node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock"]
 volume_db = 10.097
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ObjectRock"]
+position = Vector2(43.333336, 208.00003)
+shape = SubResource("CircleShape2D_a05x2")
 
 [node name="ObjectRock2" type="Node2D" parent="."]
 script = ExtResource("4_s7a3y")
@@ -188,3 +209,6 @@ volume_db = 10.097
 stream = ExtResource("7_6dm4g")
 volume_db = -15.0
 autoplay = true
+
+[connection signal="body_entered" from="AnimationPlayer/Player 1/Range" to="AnimationPlayer/Player 1" method="_on_range_body_entered"]
+[connection signal="body_exited" from="AnimationPlayer/Player 1/Range" to="AnimationPlayer/Player 1" method="_on_range_body_exited"]
