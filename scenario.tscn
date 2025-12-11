@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bh1uemrm3v7ww"]
+[gd_scene load_steps=18 format=3 uid="uid://bh1uemrm3v7ww"]
 
 [ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cmbvarul6v7bi" path="res://player_1.gd" id="2_a05x2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
 [ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
+[ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a05x2"]
 size = Vector2(1919.9094, 56.802795)
@@ -178,6 +179,10 @@ texture = ExtResource("6_a05x2")
 
 [node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock2"]
 volume_db = 10.097
+
+[node name="ItemFall" parent="." instance=ExtResource("8_03rl8")]
+
+[node name="Sprite2D2" type="Sprite2D" parent="ItemFall"]
 
 [node name="Ambient sound" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("7_6dm4g")

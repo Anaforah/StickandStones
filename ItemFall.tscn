@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://c8tyi5nwj7qhi"]
+
+[ext_resource path="res://item_fall.gd" type="Script" id=1]
+
+[node name="ItemFall" type="Node2D"]
+script = ExtResource( 1 )
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = null

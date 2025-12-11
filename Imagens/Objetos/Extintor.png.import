@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://uaaywwh634o7"
-path="res://.godot/imported/Extintor.png-61b85a667a1a42b3eca6bfe2a6c46fd1.ctex"
+path="res://.godot/imported/Extintor.png-a76ca7d4d71448a7e329bcc16afd08ed.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Imagens/Extintor.png"
-dest_files=["res://.godot/imported/Extintor.png-61b85a667a1a42b3eca6bfe2a6c46fd1.ctex"]
+source_file="res://Imagens/Objetos/Extintor.png"
+dest_files=["res://.godot/imported/Extintor.png-a76ca7d4d71448a7e329bcc16afd08ed.ctex"]
 
 [params]
 
