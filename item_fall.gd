@@ -28,6 +28,9 @@ func _input(event):
 			if sprite.get_rect().has_point(sprite.to_local(event.position)):
 				dragging = true
 				drag_offset = global_position - event.position
+				# garante que prev_side_left reflete a posição real no momento do início do drag
+				var screen_mid = get_viewport_rect().size.x / 2
+				prev_side_left = global_position.x < screen_mid
 		else:
 			dragging = false
 
