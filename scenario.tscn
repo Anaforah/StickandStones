@@ -14,7 +14,7 @@
 size = Vector2(1919.9094, 56.802795)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vtlsj"]
-size = Vector2(74.89905, 1100.1799)
+size = Vector2(46.173126, 1100.1799)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vn8jf"]
 size = Vector2(112.34755, 1074.768)
@@ -104,13 +104,17 @@ scale = Vector2(0.22379528, 0.22299385)
 position = Vector2(-1.489563, 506.74036)
 shape = SubResource("RectangleShape2D_a05x2")
 
-[node name="Left_Wall" type="CollisionShape2D" parent="StaticBody2D"]
-position = Vector2(-991.9781, 17.937622)
+[node name="Centered_Wall" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(-0.744751, -11.958557)
 shape = SubResource("RectangleShape2D_vtlsj")
 
 [node name="Right_Wall" type="CollisionShape2D" parent="StaticBody2D"]
 position = Vector2(1006.4468, -5.2318726)
 shape = SubResource("RectangleShape2D_vn8jf")
+
+[node name="Left_Wall2" type="CollisionShape2D" parent="StaticBody2D"]
+position = Vector2(-991.97815, 5.979065)
+shape = SubResource("RectangleShape2D_vtlsj")
 
 [node name="Node" type="Node" parent="StaticBody2D"]
 
@@ -150,6 +154,7 @@ script = ExtResource("3_a05x2")
 position = Vector2(1126.75, 105)
 scale = Vector2(0.27950785, 0.29770496)
 texture = ExtResource("3_6dm4g")
+flip_h = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer2/Player 2"]
 position = Vector2(1132.8125, 112)
