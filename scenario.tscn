@@ -17,7 +17,7 @@ size = Vector2(1919.9094, 56.802795)
 size = Vector2(46.173126, 1100.1799)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vn8jf"]
-size = Vector2(112.34755, 1074.768)
+size = Vector2(52.131172, 1074.768)
 
 [sub_resource type="Gradient" id="Gradient_67p4d"]
 colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 1)
@@ -101,7 +101,7 @@ position = Vector2(214.33334, 124.00002)
 scale = Vector2(0.22379528, 0.22299385)
 
 [node name="Floor" type="CollisionShape2D" parent="StaticBody2D"]
-position = Vector2(-1.489563, 506.74036)
+position = Vector2(-1.5497208e-05, 509.72998)
 shape = SubResource("RectangleShape2D_a05x2")
 
 [node name="Centered_Wall" type="CollisionShape2D" parent="StaticBody2D"]
@@ -109,11 +109,11 @@ position = Vector2(-0.744751, -11.958557)
 shape = SubResource("RectangleShape2D_vtlsj")
 
 [node name="Right_Wall" type="CollisionShape2D" parent="StaticBody2D"]
-position = Vector2(1006.4468, -5.2318726)
+position = Vector2(976.3384, -5.2318726)
 shape = SubResource("RectangleShape2D_vn8jf")
 
 [node name="Left_Wall2" type="CollisionShape2D" parent="StaticBody2D"]
-position = Vector2(-991.97815, 5.979065)
+position = Vector2(-974.10455, -1.4948912)
 shape = SubResource("RectangleShape2D_vtlsj")
 
 [node name="Node" type="Node" parent="StaticBody2D"]
