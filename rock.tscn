@@ -2,11 +2,11 @@
 
 [ext_resource type="Texture2D" uid="uid://dximoscim5bcn" path="res://scenario.png" id="1_gtey5"]
 [ext_resource type="Script" uid="uid://6b024rosnxq4" path="res://scenari.gd" id="1_nnrwk"]
-[ext_resource type="Script" uid="uid://cdfuhp3gphh4" path="res://character_body_2d.gd" id="2_nnrwk"]
-[ext_resource type="Texture2D" uid="uid://covev3p733w7v" path="res://character.svg" id="3_qfe6l"]
-[ext_resource type="Texture2D" uid="uid://dkwm7qak03d36" path="res://pedra.svg" id="4_ch2gp"]
+[ext_resource type="Script" path="res://character_body_2d.gd" id="2_nnrwk"]
+[ext_resource type="Texture2D" path="res://character.svg" id="3_qfe6l"]
+[ext_resource type="Texture2D" path="res://pedra.svg" id="4_ch2gp"]
 [ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_nnrwk"]
-[ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_rcgop"]
+[ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://Imagens/roleta.png" id="6_rcgop"]
 
 [sub_resource type="Animation" id="Animation_p3jsh"]
 length = 0.001

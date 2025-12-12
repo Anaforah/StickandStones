@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://owfgknt37pou"
-path="res://.godot/imported/roleta.png-4258f58f00261402e65afcb68e7731bc.ctex"
+path="res://.godot/imported/roleta.png-c5a415e0f2c9b24555b195806f0be715.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://roleta.png"
-dest_files=["res://.godot/imported/roleta.png-4258f58f00261402e65afcb68e7731bc.ctex"]
+source_file="res://Imagens/roleta.png"
+dest_files=["res://.godot/imported/roleta.png-c5a415e0f2c9b24555b195806f0be715.ctex"]
 
 [params]
 
