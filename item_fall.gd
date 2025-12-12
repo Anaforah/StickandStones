@@ -5,6 +5,9 @@ var fall_speed := 300.0
 var arrived := false
 @onready var sprite := $Sprite2D
 
+# textura de fogo (efeito)
+var fire_texture := load("res://Imagens/Efeitos/Fire.png")
+
 # Texturas possíveis e índice atual (serão atribuídos pelo spawner)
 var object_textures: Array = []
 var tex_index := 0
@@ -30,6 +33,12 @@ func _input(event):
 
 func _process(delta):
 	if dragging:
+		# Se pressionar 'use_item' (E) enquanto segura o item, transforma se for Extintor
+		if Input.is_action_just_pressed("use_item"):
+			if sprite.texture and sprite.texture.resource_path == "res://Imagens/Objetos/Extintor.png":
+				sprite.texture = fire_texture
+				# Opcional: desativa ciclamento de texturas para este item
+				tex_index = -1
 		var mouse_pos = get_global_mouse_position()
 		global_position = mouse_pos + drag_offset
 
