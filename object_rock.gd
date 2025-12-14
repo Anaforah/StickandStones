@@ -202,16 +202,16 @@ func _spawn_single_item():
 	var screen_mid = get_viewport_rect().size.x / 2
 	var roleta_x = sprite_right.global_position.x
 
-	# escolhe próxima textura da pasta (1 por clique)
-	var tex = object_textures[next_object_index]
-	next_object_index = (next_object_index + 1) % object_textures.size()
+	# escolhe textura aleatória (totalmente random)
+	var random_index = randi() % object_textures.size()
+	var tex = object_textures[random_index]
 
 	var item = item_scene.instantiate()
 
 	# passa referências para o item controlar troca de texturas ao cruzar a tela
 	item.object_textures = object_textures
-	# armazena o índice atual para que o ciclo continue corretamente
-	item.tex_index = (next_object_index - 1 + object_textures.size()) % object_textures.size()
+	# armazena o índice aleatório
+	item.tex_index = random_index
 
 	# seta a textura no Sprite2D se existir e ajusta escala
 	if item.has_node("Sprite2D"):
