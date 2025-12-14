@@ -27,6 +27,7 @@ var prev_p_pressed := false
 var dragging := false
 var drag_offset := Vector2.ZERO
 var prev_side_left := false
+var is_hole := false  # Flag para indicar se o objeto é um buraco (não interativo)
 
 func _ready():
 	# Carregar todos os cenários disponíveis
@@ -70,6 +71,10 @@ func _load_achievement_sounds():
 		push_error("⚠ ERRO: Pasta res://Sons/Achievement/ não encontrada!")
 
 func _input(event):
+	# Se é um buraco, não permite interação
+	if is_hole:
+		return
+	
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			# Apenas começar a arrastar se o clique foi diretamente neste sprite
@@ -140,6 +145,11 @@ func _process(delta):
 						scenario_sprite.texture = cenario_textures[current_cenario_index]
 						# Tocar som aleatório
 						_play_random_object_sound()
+				# Pa -> cria buraco e suga objetos para o outro lado
+				elif path == "res://Imagens/Objetos/Pa.png":
+					_create_hole_and_suck_objects()
+					# Tocar som aleatório
+					_play_random_object_sound()
 		var mouse_pos = get_global_mouse_position()
 		global_position = mouse_pos + drag_offset
 
@@ -157,6 +167,10 @@ func _process(delta):
 
 	# reset do estado de P quando não está a arrastar
 	prev_p_pressed = false
+	
+	# Se este objeto é um buraco, verificar colisões com outros objetos
+	if is_hole:
+		_check_hole_collisions()
 
 	if not arrived and target_position:
 		# Move apenas na vertical para garantir queda reta (x preservado)
@@ -178,3 +192,106 @@ func _play_random_achievement_sound():
 		var random_idx = randi() % achievement_sounds.size()
 		audio_player.stream = achievement_sounds[random_idx]
 		audio_player.play()
+
+func _create_hole_and_suck_objects():
+	# Transformar a Pá em buraco
+	var buraco_texture = load("res://Imagens/buraco.png")
+	if buraco_texture:
+		sprite.texture = buraco_texture
+		# Aumentar o tamanho do buraco (1.5x maior)
+		sprite.scale = Vector2(1.2, 1.2)
+		tex_index = -1
+		# Marcar como buraco (não interativo)
+		is_hole = true
+		# Parar de arrastar imediatamente
+		dragging = false
+	
+	# Posição do buraco
+	var hole_pos = global_position
+	var screen_mid = get_viewport_rect().size.x / 2
+	var hole_is_left = hole_pos.x < screen_mid
+	
+	# Procurar todos os objetos na cena
+	var all_items = get_parent().get_children()
+	
+	for item in all_items:
+		if item == self or not item is Node2D:
+			continue
+		
+		if not item.has_node("Sprite2D"):
+			continue
+		
+		# Verificar se o objeto está "por cima" do buraco (mesma região)
+		var item_pos = item.global_position
+		var distance = hole_pos.distance_to(item_pos)
+		
+		# Se estiver próximo do buraco (raio de sucção ~150 pixels)
+		if distance < 150:
+			# Mover para o outro lado do ecrã
+			var target_x: float
+			if hole_is_left:
+				# Buraco à esquerda -> sugar para direita
+				target_x = screen_mid + (screen_mid - hole_pos.x)
+			else:
+				# Buraco à direita -> sugar para esquerda
+				target_x = screen_mid - (hole_pos.x - screen_mid)
+			
+			# Aplicar nova posição ao objeto
+			item.global_position.x = target_x
+			
+			# Se tiver a variável prev_side_left, atualizar para refletir novo lado
+			if "prev_side_left" in item:
+				item.prev_side_left = target_x < screen_mid
+
+func _check_hole_collisions():
+	# Verifica se objetos tocam este buraco e os teleporta
+	var hole_pos = global_position
+	var screen_mid = get_viewport_rect().size.x / 2
+	var hole_is_left = hole_pos.x < screen_mid
+	
+	# Raio de detecção do buraco (aumentado para garantir detecção)
+	var detection_radius = 120.0
+	
+	var all_items = get_parent().get_children()
+	
+	for item in all_items:
+		if item == self or not item is Node2D:
+			continue
+		
+		if not item.has_node("Sprite2D"):
+			continue
+		
+		# Verificar se é outro buraco
+		if "is_hole" in item and item.is_hole:
+			continue
+		
+		var item_pos = item.global_position
+		var distance = hole_pos.distance_to(item_pos)
+		
+		# Debug: mostrar quando objetos estão próximos
+		if distance < detection_radius + 50:
+			print("Distance to hole: ", distance, " Object at: ", item_pos, " Hole at: ", hole_pos)
+		
+		# Se o objeto está tocando o buraco
+		if distance < detection_radius:
+			print("TELEPORTING object! Distance: ", distance)
+			# Teleportar para o outro lado do ecrã (espelhar posição)
+			var screen_width = get_viewport_rect().size.x
+			var target_x: float
+			
+			# Calcular posição espelhada: refletir através do centro da tela
+			# Fórmula: novo_x = largura_tela - x_original
+			target_x = screen_width - hole_pos.x
+			
+			# Aplicar nova posição ao objeto (mantém Y, troca X)
+			item.global_position.x = target_x
+			
+			# Se tiver a variável prev_side_left, atualizar
+			if "prev_side_left" in item:
+				item.prev_side_left = target_x < screen_mid
+			
+			# Tocar som de achievement
+			if achievement_sounds.size() > 0 and audio_player:
+				var random_idx = randi() % achievement_sounds.size()
+				audio_player.stream = achievement_sounds[random_idx]
+				audio_player.play()
