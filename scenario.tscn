@@ -1,6 +1,6 @@
 [gd_scene load_steps=20 format=3 uid="uid://bh1uemrm3v7ww"]
 
-[ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenario1.png" id="1_fklsw"]
+[ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenarios/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cmbvarul6v7bi" path="res://player_1.gd" id="2_a05x2"]
 [ext_resource type="Texture2D" uid="uid://bwymi5bom7h4f" path="res://Imagens/Man.png" id="3_6dm4g"]
 [ext_resource type="Script" uid="uid://dfv7iid10ab86" path="res://player_2.gd" id="3_a05x2"]
@@ -175,8 +175,8 @@ scale = Vector2(0.08331547, 0.07813338)
 texture = ExtResource("5_a05x2")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock"]
-position = Vector2(-42.33336, -57.333344)
-scale = Vector2(0.11588541, 0.11914064)
+position = Vector2(-28.374363, -38.665367)
+scale = Vector2(0.08304072, 0.08457031)
 texture = ExtResource("6_a05x2")
 
 [node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock"]
@@ -191,8 +191,8 @@ scale = Vector2(0.0865528, 0.081169344)
 texture = ExtResource("5_a05x2")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock2"]
-position = Vector2(-42.33336, -57.333344)
-scale = Vector2(0.11588541, 0.11914064)
+position = Vector2(-28.207699, -38.33203)
+scale = Vector2(0.08264855, 0.08395302)
 texture = ExtResource("6_a05x2")
 
 [node name="switch_sound" type="AudioStreamPlayer2D" parent="ObjectRock2"]
