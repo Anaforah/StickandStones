@@ -345,38 +345,63 @@
         async function loadCSVFiles() {
             let csvFiles = [];
             
-            // Estratégia 1: Tentar fetch do diretório
+            // Estratégia 1: Tentar carregar manifest.json (gerado automaticamente)
             try {
-                const response = await fetch('.');
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const links = doc.querySelectorAll('a');
+                console.log('Tentando carregar files.json...');
+                const response = await fetch('files.json');
                 
-                csvFiles = Array.from(links)
-                    .map(a => a.getAttribute('href'))
-                    .filter(href => href && href.endsWith('.csv'))
-                    .sort();
-                
-                console.log('Ficheiros CSV encontrados por fetch:', csvFiles);
+                if (response.ok) {
+                    const manifest = await response.json();
+                    csvFiles = manifest.files || [];
+                    console.log('CSV files encontrados via manifest:', csvFiles);
+                } else {
+                    console.log('files.json não encontrado (status:', response.status, ')');
+                }
             } catch (e) {
-                console.log('Fetch do diretório falhou, tentando carregamento direto', e);
+                console.log('Erro ao carregar files.json:', e.message);
             }
             
-            // Estratégia 2: Se fetch falhou, tentar carregar ficheiros conhecidos
+            // Se ainda não encontrou ficheiros, tentar fetch do diretório
             if (csvFiles.length === 0) {
-                const knownFiles = ['Test_1.csv', 'Test_20251211_202805.csv', 'Test_20251211_205926.csv', 'Test_20251211_205929.csv'];
-                for (const file of knownFiles) {
-                    try {
-                        const response = await fetch(file);
-                        if (response.ok) {
-                            csvFiles.push(file);
-                        }
-                    } catch (e) {
-                        // Continuar para o próximo ficheiro
+                try {
+                    console.log('Tentando fetch do diretório...');
+                    const response = await fetch('.');
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    const html = await response.text();
+                    console.log('HTML recebido, length:', html.length);
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const links = doc.querySelectorAll('a');
+                    console.log('Links encontrados:', links.length);
+                    
+                    csvFiles = Array.from(links)
+                        .map(a => {
+                            const href = a.getAttribute('href');
+                            console.log('Link:', href);
+                            return href;
+                        })
+                        .filter(href => href && href.endsWith('.csv'))
+                        .sort()
+                        .reverse();
+                    
+                    console.log('CSV files encontrados via fetch:', csvFiles);
+                } catch (e) {
+                    console.log('Erro ao fazer fetch:', e.message);
                 }
-                console.log('Ficheiros CSV carregáveis:', csvFiles);
+            }
+            
+            // Se não encontrou ficheiros, mostrar upload manual
+            if (csvFiles.length === 0) {
+                console.log('Nenhum ficheiro encontrado automaticamente.');
+                showMessage('⚠️ Nenhum ficheiro CSV encontrado na pasta. Use o botão abaixo para fazer upload dos ficheiros CSV.');
+                setupManualUpload();
+                return;
             }
             
             if (csvFiles.length === 0) {

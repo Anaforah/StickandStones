@@ -1,0 +1,6 @@
+playerID,posX,posY,health,stateVars,sceneID,playerCount,datetime,eventType,eventName,payload
+1,0.0,0.0,100,none,1,2,20251214231853,event,playerSpawn,
+2,0.0,0.0,100,none,1,2,20251214231853,event,playerSpawn,
+1,-1.8,435.0,100,none,1,2,20251214231900,action,interact_comando,key=E,scenario=1
+1,-1.8,435.0,100,none,1,2,20251214231901,action,interact_comando,key=E,scenario=0
+1,-1.8,435.0,100,none,1,2,20251214231905,action,interact_pa,key=E,create_hole
