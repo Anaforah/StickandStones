@@ -205,6 +205,13 @@ func _spawn_single_item():
 	# escolhe textura aleatória (totalmente random)
 	var random_index = randi() % object_textures.size()
 	var tex = object_textures[random_index]
+	
+	# Extrair nome do objeto da textura
+	var object_name = "unknown"
+	if tex and tex.resource_path:
+		var path_parts = tex.resource_path.split("/")
+		var file_name = path_parts[-1]
+		object_name = file_name.get_basename()  # Remove extensão .png
 
 	var item = item_scene.instantiate()
 
@@ -239,10 +246,20 @@ func _spawn_single_item():
 
 	# Define destino: mantém x da roleta (queda vertical) e y do "chão" (player)
 	var target: Node2D = null
+	var player_id = 0
 	if roleta_x < screen_mid and get_parent().has_node("player1"):
 		target = get_parent().get_node("player1")
+		player_id = 1
 	elif roleta_x >= screen_mid and get_parent().has_node("player2"):
 		target = get_parent().get_node("player2")
+		player_id = 2
+	
+	if target:
+		item.target_position = Vector2(sprite_right.global_position.x, sprite_right.global_position.y + 300)
+		
+		# Log telemetry - object spawn
+		if has_node("/root/TelemetryManager") and player_id > 0:
+			get_node("/root/TelemetryManager").log_event(player_id, "objectSpawn", object_name)
 
 	if target:
 		item.target_position = Vector2(sprite_right.global_position.x, target.global_position.y)

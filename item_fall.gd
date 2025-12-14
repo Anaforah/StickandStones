@@ -124,12 +124,19 @@ func _process(delta):
 		if should_interact:
 			if sprite.texture:
 				var path: String = sprite.texture.resource_path
+				# Determinar qual player está interagindo (1 = esquerda, 2 = direita)
+				var player_id = 1 if is_left else 2
+				var interaction_key = "E" if is_left else "P"
+				
 				# Extintor -> fogo
 				if path == "res://Imagens/Objetos/Extintor.png":
 					sprite.texture = fire_texture
 					tex_index = -1
 					# Tocar som aleatório
 					_play_random_object_sound()
+					# Log telemetry
+					if has_node("/root/TelemetryManager"):
+						get_node("/root/TelemetryManager").log_action(player_id, "interact_extintor", "key=%s" % interaction_key)
 				# Comando -> troca cenário de cenario1 para cenario2
 				elif path == "res://Imagens/Objetos/comando.png":
 					# Procura o Sprite2D chamado "Scenario" dentro da cena atual
@@ -145,9 +152,15 @@ func _process(delta):
 						scenario_sprite.texture = cenario_textures[current_cenario_index]
 						# Tocar som aleatório
 						_play_random_object_sound()
+						# Log telemetry
+						if has_node("/root/TelemetryManager"):
+							get_node("/root/TelemetryManager").log_action(player_id, "interact_comando", "key=%s,scenario=%d" % [interaction_key, current_cenario_index])
 				# Pa -> cria buraco e suga objetos para o outro lado
 				elif path == "res://Imagens/Objetos/Pa.png":
 					_create_hole_and_suck_objects()
+					# Log telemetry
+					if has_node("/root/TelemetryManager"):
+						get_node("/root/TelemetryManager").log_action(player_id, "interact_pa", "key=%s,create_hole" % interaction_key)
 					# Tocar som aleatório
 					_play_random_object_sound()
 		var mouse_pos = get_global_mouse_position()
@@ -159,6 +172,18 @@ func _process(delta):
 			if object_textures.size() > 0:
 				tex_index = (tex_index + 1) % object_textures.size()
 				sprite.texture = object_textures[tex_index]
+				
+				# Log telemetry - object transferred to other side
+				var new_player_id = 1 if now_left else 2
+				var object_name = "unknown"
+				if sprite.texture and sprite.texture.resource_path:
+					var path_parts = sprite.texture.resource_path.split("/")
+					var file_name = path_parts[-1]
+					object_name = file_name.get_basename()
+				
+				if has_node("/root/TelemetryManager"):
+					get_node("/root/TelemetryManager").log_event(new_player_id, "objectTransfer", object_name)
+			
 			# Tocar som de achievement
 			_play_random_achievement_sound()
 			prev_side_left = now_left
