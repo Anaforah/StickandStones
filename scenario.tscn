@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://dfv7iid10ab86" path="res://player_2.gd" id="3_a05x2"]
 [ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_s7a3y"]
 [ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
-[ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://Imagens/roleta.png" id="6_a05x2"]
+[ext_resource type="Texture2D" uid="uid://qvuhsr3i1i6x" path="res://Imagens/roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
 [ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
 
