@@ -6,10 +6,14 @@ extends RigidBody2D
 
 var switched := false
 var side := ""
+var dragging := false
+var rock_original_pos: Vector2
+var roleta_original_pos: Vector2
 
 var achievement_sounds: Array[AudioStream] = []
 var object_textures: Array[Texture2D] = []
 var next_object_index := 0
+var original_collision_pos: Vector2
 
 # 🔥 PRELOAD DO ITEM QUE VAI CAIR
 var item_scene: PackedScene = preload("res://ItemFall.tscn")
@@ -18,6 +22,11 @@ func _ready():
 	# Carrega todos os sons da pasta achievement
 	_load_achievement_sounds()
 	_load_object_textures()
+	
+	# Store original positions
+	rock_original_pos = sprite_left.position
+	roleta_original_pos = sprite_right.position
+	original_collision_pos = $CollisionShape2D.position
 	
 	# Detecta automaticamente o lado inicial do sprite_left
 	var screen_width = get_viewport_rect().size.x
@@ -213,9 +222,5 @@ func _spawn_single_item():
 
 	# target_position já definido abaixo
 func move_to(new_pos: Vector2):
-	global_position = new_pos
-
-
-func set_visible_left(left_visible: bool):
-	sprite_left.visible = left_visible
-	sprite_right.visible = not left_visible
+	global_position.x = new_pos.x
+	# Keep current y position

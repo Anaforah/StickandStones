@@ -112,7 +112,7 @@ libraries = {
 &"": SubResource("AnimationLibrary_s7a3y")
 }
 
-[node name="Object_rock" type="Sprite2D" parent="."]
+[node name="Object_rock" type="RigidBody2D" parent="."]
 script = ExtResource("4_nnrwk")
 
 [node name="rock" type="Sprite2D" parent="Object_rock"]
@@ -121,4 +121,6 @@ texture = ExtResource("4_ch2gp")
 [node name="roleta" type="Sprite2D" parent="Object_rock"]
 texture = ExtResource("6_rcgop")
 
-[node name="rockcollision" type="CollisionShape2D" parent="Object_rock"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Object_rock"]
+
+[node name="switch_sound" type="AudioStreamPlayer2D" parent="Object_rock"]
