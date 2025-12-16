@@ -1,8 +1,0 @@
-playerID,posX,posY,health,stateVars,sceneID,playerCount,datetime,eventType,eventName,payload
-1,0.0,0.0,100,none,1,2,20251214232316,event,playerSpawn,
-2,0.0,0.0,100,none,1,2,20251214232316,event,playerSpawn,
-2,-1.8,437.9,100,none,1,2,20251214232323,event,objectTransfer,comando
-2,-1.8,437.9,100,none,1,2,20251214232328,action,interact_pa,key=P,create_hole
-2,-1.8,437.9,100,none,1,2,20251214232332,action,interact_comando,key=P,scenario=1
-2,-1.8,437.9,100,none,1,2,20251214232332,action,interact_comando,key=P,scenario=0
-1,-1.8,435.0,100,none,1,2,20251214232335,event,objectTransfer,Extintor

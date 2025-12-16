@@ -1,7 +1,0 @@
-playerID,posX,posY,health,stateVars,sceneID,playerCount,datetime,eventType,eventName,payload
-1,0.0,0.0,100,none,1,2,20251214231829,event,playerSpawn,
-2,0.0,0.0,100,none,1,2,20251214231829,event,playerSpawn,
-1,-1.8,435.0,100,none,1,2,20251214231834,action,jump,
-1,48.3,435.0,100,none,1,2,20251214231835,action,jump,
-1,-41.7,434.9,100,none,1,2,20251214231836,action,jump,
-1,48.3,435.0,100,none,1,2,20251214231849,action,interact_extintor,key=E
