@@ -777,8 +777,10 @@
             const x = d3.scaleLinear()
                 .domain([0, totalMinutes])
                 .range([margin.left, width - margin.right]);
+            // Y escala deve refletir a contagem acumulada apropriada
+            const yMaxAll = isAll ? (d3.max(eventCounts, d => d.count) || 1) : data.length;
             const y = d3.scaleLinear()
-                .domain([0, data.length])
+                .domain([0, yMaxAll])
                 .range([height - margin.bottom, margin.top]);
             
             // Criar tooltip
@@ -819,7 +821,7 @@
                             Tipo: ${d.type}<br/>
                             Jogador: ${d.playerID}<br/>
                             Tempo: ${d.time.toFixed(2)} min<br/>
-                            Evento: ${d.index + 1}/${data.length}<br/>
+                            Evento: ${d.index + 1}/${isAll ? (Math.round(yMaxAll)) : data.length}<br/>
                             ${d.payload ? 'Payload: ' + d.payload : ''}
                         `)
                         .style('left', (event.pageX + 10) + 'px')
