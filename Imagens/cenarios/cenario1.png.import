@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dngsog1h56ch"
-path="res://.godot/imported/cenario1.png-fa913a64bbb76544e6023829ddd9c020.ctex"
+path="res://.godot/imported/cenario1.png-3f728cdac84f697d7ff4209f01297133.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Imagens/cenario1.png"
-dest_files=["res://.godot/imported/cenario1.png-fa913a64bbb76544e6023829ddd9c020.ctex"]
+source_file="res://Imagens/cenarios/cenario1.png"
+dest_files=["res://.godot/imported/cenario1.png-3f728cdac84f697d7ff4209f01297133.ctex"]
 
 [params]
 
