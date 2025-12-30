@@ -1,0 +1,117 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://settings_popup.gd" id="1_5ovxi"]
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0.2, 0.2, 0.2, 0.95)
+border_color = Color(1, 0.647, 0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+
+[node name="SettingsPopup" type="Control"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -220.0
+offset_right = 300.0
+offset_bottom = 250.0
+script = ExtResource("1_5ovxi")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+margin_left = 16.0
+margin_top = 16.0
+margin_right = -16.0
+margin_bottom = -16.0
+separation = 12
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+text = "Controls"
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+
+[node name="ControlsContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+alignment = 1
+separation = 48
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 360)
+
+[node name="LeftSpacer" type="Control" parent="Panel/VBoxContainer/ControlsContainer"]
+size_flags_horizontal = 1
+custom_minimum_size = Vector2(100, 0)
+
+[node name="Player1Column" type="VBoxContainer" parent="Panel/VBoxContainer/ControlsContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+separation = 6
+
+[node name="Player1Label" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player1Column"]
+text = "Player 1"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.647, 0, 1)
+
+[node name="Player1Move" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player1Column"]
+text = "A - Move Left"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player1MoveRight" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player1Column"]
+text = "D - Move Right"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player1Jump" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player1Column"]
+text = "W - Jump"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player1Item" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player1Column"]
+text = "E - Use Item"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player2Column" type="VBoxContainer" parent="Panel/VBoxContainer/ControlsContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+separation = 6
+
+[node name="RightSpacer" type="Control" parent="Panel/VBoxContainer/ControlsContainer"]
+size_flags_horizontal = 1
+custom_minimum_size = Vector2(32, 0)
+
+[node name="Player2Label" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player2Column"]
+text = "Player 2"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.647, 0, 1)
+
+[node name="Player2Move" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player2Column"]
+text = "← - Move Left"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player2MoveRight" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player2Column"]
+text = "→ - Move Right"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player2Jump" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player2Column"]
+text = "↑ - Jump"
+theme_override_font_sizes/font_size = 14
+
+[node name="Player2Item" type="Label" parent="Panel/VBoxContainer/ControlsContainer/Player2Column"]
+text = "P - Use Item"
+theme_override_font_sizes/font_size = 14
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="Spacer" type="Control" parent="Panel/VBoxContainer"]
+size_flags_vertical = 3
+
+[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+text = "Close"
+theme_override_font_sizes/font_size = 16
+
