@@ -130,6 +130,8 @@ func _process(delta):
 					tex_index = -1
 					# Tocar som aleatório
 					_play_random_object_sound()
+					# Multiplicar fogo no mesmo lado da tela
+					_multiply_fire_on_side()
 				# Comando -> troca cenário de cenario1 para cenario2
 				elif path == "res://Imagens/Objetos/comando.png":
 					# Procura o Sprite2D chamado "Scenario" dentro da cena atual
@@ -180,6 +182,10 @@ func _process(delta):
 			# Para no destino vertical e permanece (não é removido)
 			global_position.y = target_position.y
 			arrived = true
+	
+	# Verificar colisão com fogo se for fogo
+	if sprite.texture and sprite.texture.resource_path == "res://Imagens/Efeitos/Fire.png":
+		_check_fire_collision_with_players()
 
 func _play_random_object_sound():
 	if object_sounds.size() > 0 and audio_player:
@@ -198,8 +204,17 @@ func _create_hole_and_suck_objects():
 	var buraco_texture = load("res://Imagens/buraco.png")
 	if buraco_texture:
 		sprite.texture = buraco_texture
-		# Aumentar o tamanho do buraco (1.5x maior)
+		# Aumentar o tamanho do buraco (1.2x maior)
 		sprite.scale = Vector2(1.2, 1.2)
+		
+		# Ajustar o collision shape para corresponder ao tamanho do buraco
+		if has_node("CollisionShape2D"):
+			var collision = get_node("CollisionShape2D")
+			if collision.shape is CircleShape2D:
+				# Aumentar o raio para cobrir toda a área visível do buraco
+				# Assumindo que a textura original tem um certo tamanho, multiplicar pela escala
+				collision.shape.radius = 60.0  # Raio maior para cobrir toda a área
+		
 		tex_index = -1
 		# Marcar como buraco (não interativo)
 		is_hole = true
@@ -244,13 +259,29 @@ func _create_hole_and_suck_objects():
 				item.prev_side_left = target_x < screen_mid
 
 func _check_hole_collisions():
-	# Verifica se objetos tocam este buraco e os teleporta
+	# Verifica se objetos tocam este buraco e os teleporta usando collision shape
+	if not is_hole:
+		return
+	
+	# Obter o collision shape do buraco
+	var hole_collision: CollisionShape2D = null
+	if has_node("CollisionShape2D"):
+		hole_collision = get_node("CollisionShape2D")
+	
+	if not hole_collision or not hole_collision.shape:
+		return
+	
 	var hole_pos = global_position
 	var screen_mid = get_viewport_rect().size.x / 2
-	var hole_is_left = hole_pos.x < screen_mid
 	
-	# Raio de detecção do buraco (aumentado para garantir detecção)
-	var detection_radius = 120.0
+	# Obter o raio do collision shape do buraco
+	var hole_radius = 0.0
+	if hole_collision.shape is CircleShape2D:
+		hole_radius = hole_collision.shape.radius
+		# Multiplicar pelo scale do sprite se houver
+		if has_node("Sprite2D"):
+			var sprite_node = get_node("Sprite2D")
+			hole_radius *= max(sprite_node.scale.x, sprite_node.scale.y)
 	
 	var all_items = get_parent().get_children()
 	
@@ -265,25 +296,37 @@ func _check_hole_collisions():
 		if "is_hole" in item and item.is_hole:
 			continue
 		
+		# Obter collision shape do objeto
+		var item_collision: CollisionShape2D = null
+		if item.has_node("CollisionShape2D"):
+			item_collision = item.get_node("CollisionShape2D")
+		
 		var item_pos = item.global_position
 		var distance = hole_pos.distance_to(item_pos)
 		
-		# Debug: mostrar quando objetos estão próximos
-		if distance < detection_radius + 50:
-			print("Distance to hole: ", distance, " Object at: ", item_pos, " Hole at: ", hole_pos)
+		# Raio do objeto
+		var item_radius = 0.0
+		if item_collision and item_collision.shape is CircleShape2D:
+			item_radius = item_collision.shape.radius
+			# Multiplicar pelo scale do sprite do item
+			if item.has_node("Sprite2D"):
+				var item_sprite = item.get_node("Sprite2D")
+				item_radius *= max(item_sprite.scale.x, item_sprite.scale.y)
+		else:
+			item_radius = 30.0  # Raio padrão se não tiver collision shape
 		
-		# Se o objeto está tocando o buraco
-		if distance < detection_radius:
-			print("TELEPORTING object! Distance: ", distance)
-			# Teleportar para o outro lado do ecrã (espelhar posição)
+		# Verificar colisão: distância entre centros < soma dos raios
+		var collision_distance = hole_radius + item_radius
+		if distance < collision_distance:
+			print("TELEPORTING object! Distance: ", distance, " Collision distance: ", collision_distance)
+			# Teleportar para o outro lado do ecrã
 			var screen_width = get_viewport_rect().size.x
 			var target_x: float
 			
-			# Calcular posição espelhada: refletir através do centro da tela
-			# Fórmula: novo_x = largura_tela - x_original
+			# Calcular posição espelhada
 			target_x = screen_width - hole_pos.x
 			
-			# Aplicar nova posição ao objeto (mantém Y, troca X)
+			# Aplicar nova posição ao objeto
 			item.global_position.x = target_x
 			
 			# Se tiver a variável prev_side_left, atualizar
@@ -295,3 +338,153 @@ func _check_hole_collisions():
 				var random_idx = randi() % achievement_sounds.size()
 				audio_player.stream = achievement_sounds[random_idx]
 				audio_player.play()
+
+func _multiply_fire_on_side():
+	# Determina o lado da tela onde o fogo foi criado
+	var screen_mid = get_viewport_rect().size.x / 2
+	var is_left_side = global_position.x < screen_mid
+	
+	# Número de fogos adicionais a criar (3-5 fogos)
+	var num_fires = randi_range(3, 5)
+	
+	# Carrega a cena ItemFall para criar instâncias próprias
+	var item_scene = load("res://ItemFall.tscn")
+	
+	# Cria múltiplos fogos espalhados no mesmo lado da tela
+	for i in range(num_fires):
+		# Instancia um novo item
+		var fire_item = item_scene.instantiate()
+		
+		# Adiciona à cena primeiro para que os nodes filhos estejam disponíveis
+		get_parent().add_child(fire_item)
+		
+		# Configura o sprite do fogo
+		if fire_item.has_node("Sprite2D"):
+			var fire_sprite = fire_item.get_node("Sprite2D")
+			fire_sprite.texture = fire_texture
+			fire_sprite.scale = sprite.scale
+			
+			# Define tex_index como -1 para que não mude de textura
+			fire_item.tex_index = -1
+			
+			# Marca como "arrived" para que não caia
+			fire_item.arrived = true
+		
+		# Posicionar o fogo aleatoriamente no mesmo lado da tela
+		var screen_width = get_viewport_rect().size.x
+		var screen_height = get_viewport_rect().size.y
+		
+		var fire_x: float
+		if is_left_side:
+			# Lado esquerdo: entre 50 e meio da tela - 50
+			fire_x = randf_range(50, screen_mid - 50)
+		else:
+			# Lado direito: entre meio da tela + 50 e largura - 50
+			fire_x = randf_range(screen_mid + 50, screen_width - 50)
+		
+		# Posição Y aleatória na metade inferior da tela
+		var fire_y = randf_range(screen_height * 0.4, screen_height - 100)
+		
+		fire_item.global_position = Vector2(fire_x, fire_y)
+		
+		# Animação de aparecimento
+		if fire_item.has_node("Sprite2D"):
+			var fire_sprite = fire_item.get_node("Sprite2D")
+			fire_sprite.modulate.a = 0.0  # Começa invisível
+			var tween = create_tween()
+			tween.tween_property(fire_sprite, "modulate:a", 1.0, 0.5).set_delay(i * 0.15)
+
+func _check_fire_collision_with_players():
+	# Verificar se o fogo está perto de player1 ou player2
+	var scene_root = get_tree().get_current_scene()
+	var distance_threshold = 150.0  # Distância para detectar colisão
+	
+	# Procurar todos os players na cena
+	var all_children = scene_root.get_children()
+	
+	for child in all_children:
+		# Procurar player1 e player2
+		if child.name == "AnimationPlayer":
+			# Player 1
+			if child.has_node("Player 1"):
+				var player1 = child.get_node("Player 1")
+				_check_player_fire_collision(player1, distance_threshold)
+		elif child.name == "AnimationPlayer2":
+			# Player 2
+			if child.has_node("Player 2"):
+				var player2 = child.get_node("Player 2")
+				_check_player_fire_collision(player2, distance_threshold)
+
+func _check_player_fire_collision(player: Node2D, distance_threshold: float):
+	# Verificar distância entre fogo e player
+	var fire_pos = global_position
+	var player_pos = player.global_position
+	var distance = fire_pos.distance_to(player_pos)
+	
+	if distance < distance_threshold:
+		# Aplicar efeito de explosão ao player
+		_apply_explosion_to_player(player)
+		# Remover o fogo após colisão
+		queue_free()
+
+func _apply_explosion_to_player(player: Node2D):
+	# Encontrar o sprite do player
+	if not player.has_node("Sprite2D"):
+		return
+	
+	var player_sprite = player.get_node("Sprite2D")
+	var explosion_texture = load("res://Imagens/Efeitos/man_explotion.gif")
+	
+	# Se não conseguir carregar, tentar sem cache
+	if not explosion_texture:
+		explosion_texture = ResourceLoader.load("res://Imagens/Efeitos/man_explotion.gif", "", ResourceLoader.CACHE_MODE_REUSE)
+	
+	if explosion_texture:
+		# Trocar para textura de explosão
+		player_sprite.texture = explosion_texture
+		
+		# Parar movimento do player
+		player.velocity = Vector2.ZERO
+		
+		# Fazer desaparecer após a animação (2 segundos)
+		var tween = create_tween()
+		tween.tween_callback(func(): player_sprite.modulate.a = 0.0)
+		tween.tween_callback(func(): 
+			# Criar novo player caindo de cima
+			_spawn_new_player(player)
+			# Esconder o player antigo
+			player.visible = false
+		).set_delay(1.5)
+	else:
+		print("⚠ Erro: não conseguiu carregar man_explotion.gif")
+
+func _spawn_new_player(old_player: Node2D):
+	# Duplicar o player antigo
+	var new_player = old_player.duplicate()
+	
+	# Restaurar sprite e aparência
+	if new_player.has_node("Sprite2D"):
+		var sprite = new_player.get_node("Sprite2D")
+		var man_texture = load("res://Imagens/Man.png")
+		if man_texture:
+			sprite.texture = man_texture
+		sprite.modulate.a = 1.0
+	
+	# Posicionar no topo da tela
+	new_player.position.y = -300
+	new_player.velocity = Vector2.ZERO
+	new_player.visible = true
+	
+	# Restaurar collision shape
+	if new_player.has_node("CollisionShape2D"):
+		var collision = new_player.get_node("CollisionShape2D")
+		collision.disabled = false
+	
+	# Adicionar à cena (ao mesmo parent do player antigo)
+	old_player.get_parent().add_child(new_player)
+	
+	# Animar queda com AnimationPlayer se existir
+	if new_player.has_node("AnimationPlayer"):
+		var anim_player = new_player.get_node("AnimationPlayer")
+		if anim_player.has_animation("down"):
+			anim_player.play("down")

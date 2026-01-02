@@ -56,13 +56,26 @@ func _load_object_textures():
 		push_error("⚠ ERRO: Pasta res://Imagens/Objetos/ não encontrada!")
 
 func _input(event):
+	# Verificar teclas E e P apenas quando estiver a pressionar a roleta (dragging)
+	if event is InputEventKey:
+		if event.pressed and not event.echo and dragging:
+			# Tecla E pressionada (lado esquerdo)
+			if event.keycode == KEY_E:
+				if sprite_right.visible:
+					var screen_mid = get_viewport_rect().size.x / 2
+					var roleta_x = sprite_right.global_position.x
+					if roleta_x < screen_mid:
+						_spawn_single_item()
+			# Tecla P pressionada (lado direito)
+			elif event.keycode == KEY_P:
+				if sprite_right.visible:
+					var screen_mid = get_viewport_rect().size.x / 2
+					var roleta_x = sprite_right.global_position.x
+					if roleta_x >= screen_mid:
+						_spawn_single_item()
+	
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-
-			# 🔥 CLIQUE NA ROLETA → SPAWN DO ITEM (apenas 1 de cada vez)
-			if sprite_right.visible and sprite_right.get_rect().has_point(sprite_right.to_local(event.position)):
-				_spawn_single_item()
-
 			# Verifica se iniciou drag
 			if (sprite_left.visible and sprite_left.get_rect().has_point(sprite_left.to_local(event.position))) \
 			or (sprite_right.visible and sprite_right.get_rect().has_point(sprite_right.to_local(event.position))):
