@@ -703,45 +703,67 @@
             let eventCounts = [];
             let totalMinutes = 0;
             if (isAll) {
-                const buckets = 50;
-                const bucketSums = new Array(buckets).fill(0);
-                let avgDurationMinutes = 0;
-                let fileCount = allData.length;
+                // Novo: Agregação por tempo real (bins fixos em minutos), não por progresso normalizado
+                const perFiles = [];
                 allData.forEach(file => {
-                    const parsed = file.data.map(d => parseDateTime(d.datetime)).filter(t => t !== null);
+                    const parsed = file.data
+                        .map(d => parseDateTime(d.datetime))
+                        .filter(t => t !== null);
                     const hasTime = parsed.length >= 2;
-                    const minT = hasTime ? Math.min(...parsed.map(t => t.getTime())) : null;
-                    const maxT = hasTime ? Math.max(...parsed.map(t => t.getTime())) : null;
-                    const durationMin = hasTime ? Math.max(0.0001, (maxT - minT) / 60000) : Math.max(0.1, file.data.length / 10);
-                    avgDurationMinutes += durationMin;
-                    file.data.forEach((d, i) => {
-                        let progress;
-                        if (hasTime) {
-                            const dt = parseDateTime(d.datetime);
-                            progress = dt ? (dt.getTime() - minT) / (maxT - minT || 1) : i / Math.max(1, file.data.length - 1);
-                        } else {
-                            progress = i / Math.max(1, file.data.length - 1);
-                        }
-                        const b = Math.min(buckets - 1, Math.max(0, Math.floor(progress * (buckets - 1))));
-                        bucketSums[b] += 1;
-                    });
+                    if (hasTime) {
+                        const timesMs = parsed.map(t => t.getTime());
+                        const minT = Math.min(...timesMs);
+                        const maxT = Math.max(...timesMs);
+                        const durationMin = Math.max(0.0001, (maxT - minT) / 60000);
+                        const timesMinutes = parsed.map(t => (t.getTime() - minT) / 60000);
+                        perFiles.push({ duration: durationMin, times: timesMinutes });
+                    } else {
+                        // Fallback: estimar tempo (10 eventos por minuto)
+                        const durationMin = Math.max(0.1, file.data.length / 10);
+                        const timesMinutes = file.data.map((_, i) => (i / Math.max(1, file.data.length - 1)) * durationMin);
+                        perFiles.push({ duration: durationMin, times: timesMinutes });
+                    }
                 });
-                avgDurationMinutes = avgDurationMinutes / Math.max(1, fileCount);
-                totalMinutes = Math.max(0.01, avgDurationMinutes);
-                let cumulative = 0;
-                for (let i = 0; i < buckets; i++) {
-                    cumulative += bucketSums[i] / Math.max(1, fileCount);
-                    const time = (totalMinutes * i) / (buckets - 1);
+
+                const fileCount = perFiles.length;
+                const maxDuration = perFiles.reduce((m, f) => Math.max(m, f.duration), 0.01);
+                // Aproximadamente um bin por 10s, limitado
+                const bins = Math.max(20, Math.min(120, Math.round(maxDuration * 6)));
+                totalMinutes = maxDuration;
+
+                // Console logs para verificação
+                try {
+                    console.log('ALL timeline: fileCount=', fileCount, 'maxDuration(min)=', maxDuration.toFixed(2), 'bins=', bins);
+                } catch (e) {}
+
+                for (let i = 0; i < bins; i++) {
+                    const t = (i / (bins - 1)) * maxDuration; // tempo em minutos
+                    let sumCounts = 0;
+                    // Contagem cumulativa por ficheiro até t
+                    perFiles.forEach(f => {
+                        // Nº de eventos com tempo <= t (manter plateau após terminar)
+                        const times = f.times;
+                        let cnt = 0;
+                        // busca linear simples (dados modestos)
+                        for (let k = 0; k < times.length; k++) {
+                            if (times[k] <= t) cnt = k + 1; else break;
+                        }
+                        sumCounts += cnt;
+                    });
+                    const avgCount = sumCounts / Math.max(1, fileCount);
                     eventCounts.push({
                         index: i,
-                        count: cumulative,
-                        time: time,
+                        count: avgCount,
+                        time: t,
                         type: 'avg',
                         name: 'Média',
                         playerID: '-',
                         payload: ''
                     });
                 }
+                try {
+                    console.log('ALL timeline sample:', eventCounts.slice(0, 5));
+                } catch (e) {}
             } else {
                 // Calcular tempo real em minutos se houver timestamps, senão estimar
                 const parsedTimes = data
