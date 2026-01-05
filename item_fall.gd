@@ -184,8 +184,11 @@ func _process(delta):
 			arrived = true
 	
 	# Verificar colisão com fogo se for fogo
-	if sprite.texture and sprite.texture.resource_path == "res://Imagens/Efeitos/Fire.png":
-		_check_fire_collision_with_players()
+	if sprite.texture:
+		var texture_path = sprite.texture.resource_path
+		if texture_path.contains("Fire.png"):
+			# Executar a verificação de colisão de forma assíncrona
+			_check_fire_collision_with_players_async()
 
 func _play_random_object_sound():
 	if object_sounds.size() > 0 and audio_player:
@@ -394,81 +397,204 @@ func _multiply_fire_on_side():
 			var tween = create_tween()
 			tween.tween_property(fire_sprite, "modulate:a", 1.0, 0.5).set_delay(i * 0.15)
 
-func _check_fire_collision_with_players():
+func _check_fire_collision_with_players_async() -> void:
+	# Executar a verificação de forma assíncrona
+	_check_fire_collision_with_players()
+
+func _check_fire_collision_with_players() -> void:
 	# Verificar se o fogo está perto de player1 ou player2
 	var scene_root = get_tree().get_current_scene()
-	var distance_threshold = 150.0  # Distância para detectar colisão
+	var distance_threshold = 150.0  # Aumentado para 150 pixels para melhor detecção
 	
-	# Procurar todos os players na cena
-	var all_children = scene_root.get_children()
+	# Procurar players diretamente usando find_child
+	var player1 = scene_root.find_child("Player 1", true, false)
+	var player2 = scene_root.find_child("Player 2", true, false)
 	
-	for child in all_children:
-		# Procurar player1 e player2
-		if child.name == "AnimationPlayer":
-			# Player 1
-			if child.has_node("Player 1"):
-				var player1 = child.get_node("Player 1")
-				_check_player_fire_collision(player1, distance_threshold)
-		elif child.name == "AnimationPlayer2":
-			# Player 2
-			if child.has_node("Player 2"):
-				var player2 = child.get_node("Player 2")
-				_check_player_fire_collision(player2, distance_threshold)
-
-func _check_player_fire_collision(player: Node2D, distance_threshold: float):
-	# Verificar distância entre fogo e player
-	var fire_pos = global_position
-	var player_pos = player.global_position
-	var distance = fire_pos.distance_to(player_pos)
+	var closest_player = null
+	var closest_distance = distance_threshold
 	
-	if distance < distance_threshold:
-		# Aplicar efeito de explosão ao player
-		_apply_explosion_to_player(player)
+	# Verificar player1
+	if player1:
+		var distance = _calculate_distance_to_player(player1)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_player = player1
+	
+	# Verificar player2
+	if player2:
+		var distance = _calculate_distance_to_player(player2)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_player = player2
+	
+	# Aplicar explosão apenas ao jogador mais próximo (se estiver dentro do threshold)
+	if closest_player:
+		await _apply_explosion_to_player(closest_player)
 		# Remover o fogo após colisão
 		queue_free()
 
+func _calculate_distance_to_player(player: Node2D) -> float:
+	# Calcular distância entre fogo e player (horizontal E vertical)
+	var fire_pos = global_position
+	var player_pos = player.global_position
+	var distance_x = abs(fire_pos.x - player_pos.x)
+	var distance_y = abs(fire_pos.y - player_pos.y)
+	
+	# Só considerar se estiver próximo verticalmente também (dentro de 150 pixels)
+	if distance_y > 150:
+		return 999999.0  # Retorna valor muito alto para ignorar
+	
+	return distance_x
+
 func _apply_explosion_to_player(player: Node2D):
-	# Encontrar o sprite do player
-	if not player.has_node("Sprite2D"):
+	# Verificar se o player já está explodindo (evitar duplicações)
+	if player.has_meta("exploding"):
 		return
 	
-	var player_sprite = player.get_node("Sprite2D")
-	var explosion_texture = load("res://Imagens/Efeitos/man_explotion.gif")
+	# Marcar o player como explodindo
+	player.set_meta("exploding", true)
 	
-	# Se não conseguir carregar, tentar sem cache
-	if not explosion_texture:
-		explosion_texture = ResourceLoader.load("res://Imagens/Efeitos/man_explotion.gif", "", ResourceLoader.CACHE_MODE_REUSE)
-	
-	if explosion_texture:
-		# Trocar para textura de explosão
-		player_sprite.texture = explosion_texture
-		
-		# Parar movimento do player
-		player.velocity = Vector2.ZERO
-		
-		# Fazer desaparecer após a animação (2 segundos)
-		var tween = create_tween()
-		tween.tween_callback(func(): player_sprite.modulate.a = 0.0)
-		tween.tween_callback(func(): 
-			# Criar novo player caindo de cima
-			_spawn_new_player(player)
-			# Esconder o player antigo
-			player.visible = false
-		).set_delay(1.5)
-	else:
-		print("⚠ Erro: não conseguiu carregar man_explotion.gif")
+	# Encontrar o sprite do player
+	if not player.has_node("Sprite2D"):
+		# Player pode não ter Sprite2D, ignorar
+		return
 
-func _spawn_new_player(old_player: Node2D):
+	var player_sprite = player.get_node("Sprite2D")
+
+	# Guardar TODAS as informações necessárias do player ANTES de modificá-lo
+	var original_texture = player_sprite.texture
+	var player_parent = player.get_parent()
+	var player_name = player.name
+	var player_global_pos = player.global_position
+	var player_scale = player_sprite.scale
+	
+	# Tocar som aleatório da pasta Sons/Personagem
+	_play_random_character_sound(player_global_pos)
+	
+	# Criar um novo AnimatedSprite2D para a explosão
+	var animated_explosion = AnimatedSprite2D.new()
+	
+	# Criar SpriteFrames para a animação
+	var sprite_frames = SpriteFrames.new()
+	sprite_frames.add_animation("explosion")
+	
+	# Carregar todos os frames extraídos do GIF
+	var frames_loaded = 0
+	for i in range(1, 18):  # 17 frames extraídos
+		var frame_path = "res://Imagens/Efeitos/frame_%03d.png" % i
+		var frame_texture = load(frame_path)
+		if frame_texture:
+			sprite_frames.add_frame("explosion", frame_texture)
+			frames_loaded += 1
+		else:
+			print("⚠ Não conseguiu carregar frame: ", frame_path)
+	
+	print("✓ Carregados ", frames_loaded, " frames de explosão")
+	
+	if frames_loaded == 0:
+		print("⚠ Nenhum frame de explosão carregado! Usando Fire.png como fallback")
+		var explosion_texture = load("res://Imagens/Efeitos/Fire.png")
+		if explosion_texture:
+			player_sprite.texture = explosion_texture
+			player_sprite.scale = player_sprite.scale * 1.5
+		return
+	
+	# Configurar animação
+	sprite_frames.set_animation_speed("explosion", 12)  # 12 FPS para terminar mais rápido
+	sprite_frames.set_animation_loop("explosion", false)  # Reproduzir apenas 1 vez
+	
+	# Configurar AnimatedSprite2D
+	animated_explosion.sprite_frames = sprite_frames
+	animated_explosion.animation = "explosion"
+	animated_explosion.scale = player_scale * 10.5  # Aumentado 2.5x o tamanho
+	animated_explosion.global_position = player_global_pos
+	
+	# Adicionar explosão diretamente à cena (não ao player)
+	player_parent.add_child(animated_explosion)
+	
+	# Esconder o player imediatamente
+	player.visible = false
+	
+	# Começar a animação
+	animated_explosion.play()
+	
+	# Parar movimento do player
+	player.velocity = Vector2.ZERO
+
+	# Aguardar o sinal de animação terminada
+	await animated_explosion.animation_finished
+	
+	_remove_all_fires()
+	
+	# Fade out da explosão (mais rápido)
+	var tween = create_tween()
+	tween.tween_property(animated_explosion, "modulate:a", 0.0, 0.3)
+	await tween.finished
+	
+	# Remover a explosão IMEDIATAMENTE
+	if is_instance_valid(animated_explosion):
+		animated_explosion.queue_free()
+	
+	# Remover completamente o player antigo
+	if is_instance_valid(player):
+		player.queue_free()
+	
+	# Esperar um frame para garantir que foi removido
+	await get_tree().process_frame
+	
+	# Criar novo player
+	_spawn_new_player_at_top(player_parent, player_name, original_texture, player_global_pos.x)
+
+func _spawn_new_player_at_top(parent: Node, player_name: String, original_texture: Texture2D, position_x: float):
+	# Esperar um frame para garantir que o antigo player foi removido
+	await get_tree().process_frame
+	
+	# Criar novo CharacterBody2D
+	var new_player = CharacterBody2D.new()
+	new_player.name = player_name
+	
+	# Adicionar Sprite2D
+	var new_sprite = Sprite2D.new()
+	new_sprite.texture = original_texture
+	new_sprite.name = "Sprite2D"
+	new_player.add_child(new_sprite)
+	
+	# Adicionar CollisionShape2D (cópia da forma original)
+	var collision = CollisionShape2D.new()
+	collision.name = "CollisionShape2D"
+	# Criar uma forma retangular básica
+	var shape = RectangleShape2D.new()
+	shape.size = Vector2(50, 100)  # Tamanho aproximado do personagem
+	collision.shape = shape
+	new_player.add_child(collision)
+	
+	# Adicionar script do player
+	if player_name == "Player 1":
+		new_player.set_script(load("res://player_1.gd"))
+	elif player_name == "Player 2":
+		new_player.set_script(load("res://player_2.gd"))
+	
+	# Posicionar no topo com a mesma posição X do antigo
+	new_player.position = Vector2(position_x, -300)
+	
+	# Adicionar à cena
+	parent.add_child(new_player)
+
+func _spawn_new_player_with_animation(old_player: Node2D, original_texture: Texture2D):
+
+	# remover explosão se ainda existir no player antigo
+	if old_player.has_node("AnimatedSprite2D"):
+		old_player.get_node("AnimatedSprite2D").queue_free()
+	
 	# Duplicar o player antigo
 	var new_player = old_player.duplicate()
 	
 	# Restaurar sprite e aparência
 	if new_player.has_node("Sprite2D"):
-		var sprite = new_player.get_node("Sprite2D")
-		var man_texture = load("res://Imagens/Man.png")
-		if man_texture:
-			sprite.texture = man_texture
-		sprite.modulate.a = 1.0
+		var player_sprite = new_player.get_node("Sprite2D")
+		if original_texture:
+			player_sprite.texture = original_texture
+		player_sprite.modulate.a = 1.0
 	
 	# Posicionar no topo da tela
 	new_player.position.y = -300
@@ -483,8 +609,48 @@ func _spawn_new_player(old_player: Node2D):
 	# Adicionar à cena (ao mesmo parent do player antigo)
 	old_player.get_parent().add_child(new_player)
 	
-	# Animar queda com AnimationPlayer se existir
+	# Animar queda com AnimationPlayer se existir (mesmo efeito que no play)
 	if new_player.has_node("AnimationPlayer"):
 		var anim_player = new_player.get_node("AnimationPlayer")
 		if anim_player.has_animation("down"):
 			anim_player.play("down")
+
+func _remove_all_fires():
+	# Encontrar e remover todos os fogos da cena
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return
+	
+	var all_items = scene_root.get_children()
+	
+	for item in all_items:
+		# Verificar se é um item de fogo (tem Fire.png)
+		if item.has_node("Sprite2D"):
+			var item_sprite = item.get_node("Sprite2D")
+			if item_sprite.texture and item_sprite.texture.resource_path.contains("Fire.png"):
+				item.queue_free()
+
+func _play_random_character_sound(position: Vector2):
+	# Carregar sons da pasta Sons/Personagem
+	var character_sounds: Array[AudioStream] = []
+	var dir := DirAccess.open("res://Sons/Personagem")
+	
+	if dir:
+		for file_name in dir.get_files():
+			if file_name.ends_with(".wav") or file_name.ends_with(".ogg") or file_name.ends_with(".mp3"):
+				var sound: AudioStream = load("res://Sons/Personagem/" + file_name)
+				if sound:
+					character_sounds.append(sound)
+	
+	# Se encontrou sons, tocar um aleatório
+	if character_sounds.size() > 0:
+		var sound_player = AudioStreamPlayer2D.new()
+		sound_player.stream = character_sounds[randi() % character_sounds.size()]
+		sound_player.global_position = position
+		
+		# Adicionar à cena
+		get_tree().get_current_scene().add_child(sound_player)
+		
+		# Tocar e remover quando terminar
+		sound_player.play()
+		sound_player.finished.connect(func(): sound_player.queue_free())
