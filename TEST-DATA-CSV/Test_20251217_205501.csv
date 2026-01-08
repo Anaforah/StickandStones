@@ -1,0 +1,3 @@
+playerID,posX,posY,health,stateVars,sceneID,playerCount,datetime,eventType,eventName,payload
+1,0.0,0.0,100,none,1,2,20251217205501,event,playerSpawn,
+2,0.0,0.0,100,none,1,2,20251217205501,event,playerSpawn,

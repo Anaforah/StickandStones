@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ba7a3yop40u0i"
+
+[deps]
+
+files=["res://TEST-DATA-CSV/Test_20251217_144637.posX.translation", "res://TEST-DATA-CSV/Test_20251217_144637.posY.translation", "res://TEST-DATA-CSV/Test_20251217_144637.health.translation", "res://TEST-DATA-CSV/Test_20251217_144637.stateVars.translation", "res://TEST-DATA-CSV/Test_20251217_144637.sceneID.translation", "res://TEST-DATA-CSV/Test_20251217_144637.playerCount.translation", "res://TEST-DATA-CSV/Test_20251217_144637.datetime.translation", "res://TEST-DATA-CSV/Test_20251217_144637.eventType.translation", "res://TEST-DATA-CSV/Test_20251217_144637.eventName.translation", "res://TEST-DATA-CSV/Test_20251217_144637.payload.translation"]
+
+source_file="res://TEST-DATA-CSV/Test_20251217_144637.csv"
+dest_files=["res://TEST-DATA-CSV/Test_20251217_144637.posX.translation", "res://TEST-DATA-CSV/Test_20251217_144637.posY.translation", "res://TEST-DATA-CSV/Test_20251217_144637.health.translation", "res://TEST-DATA-CSV/Test_20251217_144637.stateVars.translation", "res://TEST-DATA-CSV/Test_20251217_144637.sceneID.translation", "res://TEST-DATA-CSV/Test_20251217_144637.playerCount.translation", "res://TEST-DATA-CSV/Test_20251217_144637.datetime.translation", "res://TEST-DATA-CSV/Test_20251217_144637.eventType.translation", "res://TEST-DATA-CSV/Test_20251217_144637.eventName.translation", "res://TEST-DATA-CSV/Test_20251217_144637.payload.translation"]
+
+[params]
+
+compress=true
+delimiter=0

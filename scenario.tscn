@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://bh1uemrm3v7ww"]
+[gd_scene load_steps=22 format=3 uid="uid://bh1uemrm3v7ww"]
 
 [ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cmbvarul6v7bi" path="res://player_1.gd" id="2_a05x2"]
@@ -8,8 +8,11 @@
 [ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
 [ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
-[ext_resource type="Script" uid="uid://bjpk7hjpijjx3" path="res://rock.gd" id="7_67p4d"]
 [ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
+
+[sub_resource type="GDScript" id="GDScript_03rl8"]
+script/source = "extends Node2D
+"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a05x2"]
 size = Vector2(1919.9094, 56.802795)
@@ -85,11 +88,26 @@ radius = 147.12239
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_03rl8"]
 size = Vector2(83.875, 288)
 
+[sub_resource type="GDScript" id="GDScript_67p4d"]
+script/source = "extends Node2D
+
+func _ready():
+	print(\"===== Descendentes de Object_rock =====\")
+	_print_descendants(self)
+	print(\"=======================================\")
+
+func _print_descendants(node):
+	for child in node.get_children():
+		print(\"Descendente:\", child.name, \"| Tipo:\", child)
+		_print_descendants(child)
+"
+
 [sub_resource type="CircleShape2D" id="CircleShape2D_a05x2"]
 radius = 29.734007
 
 [node name="scenario" type="Node2D"]
 scale = Vector2(3, 3)
+script = SubResource("GDScript_03rl8")
 metadata/_edit_horizontal_guides_ = [-41.0]
 
 [node name="Scenario" type="Sprite2D" parent="."]
@@ -151,7 +169,7 @@ script = ExtResource("3_a05x2")
 
 [node name="Sprite2D" type="Sprite2D" parent="AnimationPlayer2/Player 2"]
 position = Vector2(1126.75, 105)
-scale = Vector2(0.27950785, 0.29770496)
+scale = Vector2(-0.28, 0.298)
 texture = ExtResource("3_6dm4g")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer2/Player 2"]
@@ -171,7 +189,7 @@ position = Vector2(1132.8125, 112)
 shape = SubResource("CircleShape2D_67p4d")
 
 [node name="HandPosition" type="Marker2D" parent="AnimationPlayer2/Player 2"]
-position = Vector2(1206.75, 101)
+position = Vector2(1038.75, 110)
 
 [node name="ObjectRock" type="RigidBody2D" parent="." groups=["CanGrab"]]
 script = ExtResource("4_s7a3y")
@@ -180,7 +198,7 @@ script = ExtResource("4_s7a3y")
 position = Vector2(42.333336, 208.66669)
 scale = Vector2(0.08331548, 0.07813339)
 texture = ExtResource("5_a05x2")
-script = ExtResource("7_67p4d")
+script = SubResource("GDScript_67p4d")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock"]
 position = Vector2(-42.33336, -57.333344)
@@ -201,7 +219,7 @@ script = ExtResource("4_s7a3y")
 position = Vector2(384.6667, 207.66667)
 scale = Vector2(0.0865528, 0.081169344)
 texture = ExtResource("5_a05x2")
-script = ExtResource("7_67p4d")
+script = SubResource("GDScript_67p4d")
 
 [node name="roleta" type="Sprite2D" parent="ObjectRock2"]
 position = Vector2(-42.33336, -57.333344)

@@ -9,6 +9,8 @@ var target_object: RigidBody2D = null
 var held_object: RigidBody2D = null
 var holding := false
 
+
+
 @onready var hand_position: Marker2D = $HandPosition
 @onready var range_area: Area2D = $Range
 
@@ -46,9 +48,14 @@ func _process(_delta: float) -> void:
 		# Pega a pedra
 		holding = true
 		held_object = target_object
+		held_object.global_position = hand_position.global_position
 		target_object.get_node("CollisionShape2D").position = target_object.original_collision_pos
 		target_object.freeze = true  # congela física
 		target_object.get_node("CollisionShape2D").disabled = true  # desabilita colisão
+		# Reparent rock to hand
+		held_object.get_parent().remove_child(held_object)
+		hand_position.add_child(held_object)
+		held_object.position = Vector2(0, 0)
 		# Reparent sprites to hand
 		var sprite_left = target_object.get_node("rock")
 		var sprite_right = target_object.get_node("roleta")
@@ -63,8 +70,11 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("p2_drop") and holding:
 		# Solta a pedra para cair verticalmente
 		holding = false
-		# Move rock to hand position first
-		held_object.move_to(hand_position.global_position)
+		# volta para o mundo
+		hand_position.remove_child(held_object)
+		get_tree().current_scene.add_child(held_object)
+		# posição inicial = mão
+		held_object.global_position = hand_position.global_position
 		held_object.get_node("CollisionShape2D").position = Vector2(0, 0)
 		held_object.freeze = false  # libera física
 		held_object.get_node("CollisionShape2D").disabled = false  # habilita colisão
@@ -82,15 +92,26 @@ func _process(_delta: float) -> void:
 
 	# Throw
 	if Input.is_action_just_pressed("p2_throw") and holding:
-		# Lança a pedra
 		holding = false
-		# Move rock to hand position first
-		held_object.move_to(hand_position.global_position)
+
+		var dir = sign(global_position.x - hand_position.global_position.x)
+		if dir == 0:
+			dir = -1
+
+		# volta para o mundo
+		hand_position.remove_child(held_object)
+		get_tree().current_scene.add_child(held_object)
+
+		# posição inicial = mão
+		held_object.global_position = hand_position.global_position
+
+		# reativa física
+		held_object.freeze = false
+		held_object.linear_velocity = Vector2.ZERO
+		held_object.angular_velocity = 0
+		held_object.get_node("CollisionShape2D").disabled = false
 		held_object.get_node("CollisionShape2D").position = Vector2(0, 0)
-		# Lança na direção do movimento
-		held_object.linear_velocity = Vector2(velocity.x * 2, -200)
-		held_object.freeze = false  # libera física
-		held_object.get_node("CollisionShape2D").disabled = false  # habilita colisão
+
 		# Reparent sprites back
 		var sprite_left = hand_position.get_node("rock")
 		var sprite_right = hand_position.get_node("roleta")
@@ -98,9 +119,12 @@ func _process(_delta: float) -> void:
 		hand_position.remove_child(sprite_right)
 		held_object.add_child(sprite_left)
 		held_object.add_child(sprite_right)
-		# Center sprites at rock's position (hand position)
 		sprite_left.position = Vector2(0, 0)
 		sprite_right.position = Vector2(0, 0)
+
+		# arco real (sprite + collision juntos)
+		held_object.linear_velocity = Vector2(dir * 400, -300)
+
 		held_object = null
 
 
