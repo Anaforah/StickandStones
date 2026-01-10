@@ -1,20 +1,24 @@
 extends CharacterBody2D
+
+
 const SPEED = 300.0
 const JUMP_VELOCITY = -400.0
 
-@onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
+var is_in_range: bool = false
+var target_object: RigidBody2D = null
+var held_object: RigidBody2D = null
+var holding := false
 
-const MAN_TEX: Texture2D = preload("res://Imagens/Man.png")
-const MAN2_TEX: Texture2D = preload("res://Imagens/man2.png")
-const MAN_JUMP_TEX: Texture2D = preload("res://Imagens/ManJump.png")
 
-var walk_frame_timer: float = 0.0
-var walk_frame_index: int = 0
-const WALK_FRAME_INTERVAL: float = 0.18
 
-func _ready() -> void:
-	if sprite and sprite.texture == null:
-		sprite.texture = MAN_TEX
+@onready var hand_position: Marker2D = $HandPosition
+@onready var range_area: Area2D = $Range
+
+func _ready():
+	# Conecta os sinais da área para detectar objetos pegáveis
+	range_area.body_entered.connect(_on_range_body_entered)
+	range_area.body_exited.connect(_on_range_body_exited)
+
 
 func _physics_process(delta: float) -> void:
 	# Add the gravity.
@@ -24,32 +28,115 @@ func _physics_process(delta: float) -> void:
 	# Handle jump.
 	if Input.is_action_just_pressed("p2_jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
-		if sprite:
-			sprite.texture = MAN_JUMP_TEX
 
 	# Get the input direction and handle the movement/deceleration.
 	# As good practice, you should replace UI actions with custom gameplay actions.
 	var direction := Input.get_axis("p2_move_left", "p2_move_right")
 	if direction:
 		velocity.x = direction * SPEED
-		# Animate walking when on the floor
-		if is_on_floor():
-			walk_frame_timer += delta
-			if walk_frame_timer >= WALK_FRAME_INTERVAL:
-				walk_frame_timer = 0.0
-				walk_frame_index = (walk_frame_index + 1) % 2
-				if sprite:
-					sprite.texture = (MAN2_TEX if walk_frame_index == 0 else MAN_TEX)
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
-		# Idle frame when on floor
-		if is_on_floor():
-			if sprite:
-				sprite.texture = MAN_TEX
-
-	# While airborne, use jump texture
-	if not is_on_floor():
-		if sprite:
-			sprite.texture = MAN_JUMP_TEX
 
 	move_and_slide()
+
+	# Sprites follow the hand automatically as children
+
+
+func _process(_delta: float) -> void:
+	# Grab
+	if Input.is_action_just_pressed("p2_grab") and is_in_range and target_object and not holding:
+		# Pega a pedra
+		holding = true
+		held_object = target_object
+		held_object.global_position = hand_position.global_position
+		target_object.get_node("CollisionShape2D").position = target_object.original_collision_pos
+		target_object.freeze = true  # congela física
+		target_object.get_node("CollisionShape2D").disabled = true  # desabilita colisão
+		# Reparent rock to hand
+		held_object.get_parent().remove_child(held_object)
+		hand_position.add_child(held_object)
+		held_object.position = Vector2(0, 0)
+		# Reparent sprites to hand
+		var sprite_left = target_object.get_node("rock")
+		var sprite_right = target_object.get_node("roleta")
+		target_object.remove_child(sprite_left)
+		target_object.remove_child(sprite_right)
+		hand_position.add_child(sprite_left)
+		hand_position.add_child(sprite_right)
+		sprite_left.position = Vector2(0, 0)
+		sprite_right.position = Vector2(0, 0)
+
+	# Drop
+	if Input.is_action_just_pressed("p2_drop") and holding:
+		# Solta a pedra para cair verticalmente
+		holding = false
+		# volta para o mundo
+		hand_position.remove_child(held_object)
+		get_tree().current_scene.add_child(held_object)
+		# posição inicial = mão
+		held_object.global_position = hand_position.global_position
+		held_object.get_node("CollisionShape2D").position = Vector2(0, 0)
+		held_object.freeze = false  # libera física
+		held_object.get_node("CollisionShape2D").disabled = false  # habilita colisão
+		# Reparent sprites back
+		var sprite_left = hand_position.get_node("rock")
+		var sprite_right = hand_position.get_node("roleta")
+		hand_position.remove_child(sprite_left)
+		hand_position.remove_child(sprite_right)
+		held_object.add_child(sprite_left)
+		held_object.add_child(sprite_right)
+		# Center sprites at rock's position (hand position)
+		sprite_left.position = Vector2(0, 0)
+		sprite_right.position = Vector2(0, 0)
+		held_object = null
+
+	# Throw
+	if Input.is_action_just_pressed("p2_throw") and holding:
+		holding = false
+
+		var dir = sign(global_position.x - hand_position.global_position.x)
+		if dir == 0:
+			dir = -1
+
+		# volta para o mundo
+		hand_position.remove_child(held_object)
+		get_tree().current_scene.add_child(held_object)
+
+		# posição inicial = mão
+		held_object.global_position = hand_position.global_position
+
+		# reativa física
+		held_object.freeze = false
+		held_object.linear_velocity = Vector2.ZERO
+		held_object.angular_velocity = 0
+		held_object.get_node("CollisionShape2D").disabled = false
+		held_object.get_node("CollisionShape2D").position = Vector2(0, 0)
+
+		# Reparent sprites back
+		var sprite_left = hand_position.get_node("rock")
+		var sprite_right = hand_position.get_node("roleta")
+		hand_position.remove_child(sprite_left)
+		hand_position.remove_child(sprite_right)
+		held_object.add_child(sprite_left)
+		held_object.add_child(sprite_right)
+		sprite_left.position = Vector2(0, 0)
+		sprite_right.position = Vector2(0, 0)
+
+		# arco real (sprite + collision juntos)
+		held_object.linear_velocity = Vector2(dir * 400, -300)
+
+		held_object = null
+
+
+# -----------------------------
+# DETECÇÃO DE OBJETOS PEGÁVEIS
+# -----------------------------
+func _on_range_body_entered(body: Node) -> void:
+	if body.is_in_group("CanGrab") and body is RigidBody2D:
+		is_in_range = true
+		target_object = body
+
+func _on_range_body_exited(body: Node) -> void:
+	if body.is_in_group("CanGrab") and body == target_object:
+		is_in_range = false
+		target_object = null
