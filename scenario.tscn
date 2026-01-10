@@ -84,12 +84,50 @@ _data = {
 &"down": SubResource("Animation_bmpdm")
 }
 
+[sub_resource type="StyleBoxFlat" id="PanelStyleBox"]
+bg_color = Color(0.1, 0.1, 0.15, 0.92)
+border_color = Color(1, 0.55, 0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+expand_margin_left = 10.0
+expand_margin_top = 6.0
+expand_margin_right = 10.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_score"]
+font_size = 48
+font_color = Color(1, 0.55, 0, 1)
+outline_size = 4
+outline_color = Color(0.1, 0.1, 0.15, 1)
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_03rl8"]
 size = Vector2(83.875, 288)
 
 [node name="scenario" type="Node2D"]
 scale = Vector2(3, 3)
 metadata/_edit_horizontal_guides_ = [-41.0]
+
+[node name="GlobalScore" type="CanvasLayer" parent="."]
+
+[node name="ScorePanel" type="PanelContainer" parent="GlobalScore"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 10.0
+offset_right = 150.0
+offset_bottom = 90.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("PanelStyleBox")
+
+[node name="ScoreLabel" type="Label" parent="GlobalScore/ScorePanel"]
+layout_mode = 2
+text = "Score: 0"
+label_settings = SubResource("LabelSettings_score")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Scenario" type="Sprite2D" parent="."]
 position = Vector2(214.33334, 124.000015)

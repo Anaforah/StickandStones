@@ -29,6 +29,10 @@ var drag_offset := Vector2.ZERO
 var prev_side_left := false
 var is_hole := false  # Flag para indicar se o objeto é um buraco (não interativo)
 
+# Score global
+static var global_score: int = 0
+static var last_gain: int = 0
+
 func _ready():
 	# Carregar todos os cenários disponíveis
 	cenario_textures.append(load("res://Imagens/cenarios/cenario1.png"))
@@ -132,6 +136,8 @@ func _process(delta):
 					_play_random_object_sound()
 					# Multiplicar fogo no mesmo lado da tela
 					_multiply_fire_on_side()
+					# Adicionar pontos
+					_add_interaction_points()
 				# Comando -> troca cenário de cenario1 para cenario2
 				elif path == "res://Imagens/Objetos/comando.png":
 					# Procura o Sprite2D chamado "Scenario" dentro da cena atual
@@ -147,11 +153,22 @@ func _process(delta):
 						scenario_sprite.texture = cenario_textures[current_cenario_index]
 						# Tocar som aleatório
 						_play_random_object_sound()
+					# Adicionar pontos
+					_add_interaction_points()
 				# Pa -> cria buraco e suga objetos para o outro lado
 				elif path == "res://Imagens/Objetos/Pa.png":
 					_create_hole_and_suck_objects()
 					# Tocar som aleatório
 					_play_random_object_sound()
+					# Adicionar pontos
+					_add_interaction_points()
+				# Aspirador -> remove objetos próximos
+				elif path == "res://Imagens/Objetos/aspirador.png":
+					_remove_nearby_objects()
+					# Tocar som aleatório
+					_play_random_object_sound()
+					# Adicionar pontos
+					_add_interaction_points()
 		var mouse_pos = get_global_mouse_position()
 		global_position = mouse_pos + drag_offset
 
@@ -163,6 +180,7 @@ func _process(delta):
 				sprite.texture = object_textures[tex_index]
 			# Tocar som de achievement
 			_play_random_achievement_sound()
+			_award_switch_points(now_left)
 			prev_side_left = now_left
 
 		return
@@ -201,6 +219,81 @@ func _play_random_achievement_sound():
 		var random_idx = randi() % achievement_sounds.size()
 		audio_player.stream = achievement_sounds[random_idx]
 		audio_player.play()
+
+func _award_switch_points(is_left: bool) -> void:
+	# Adiciona pontos globais quando há troca de objetos
+	var gain := randi_range(5, 20)
+	last_gain = gain
+	global_score += gain
+	_update_global_score_label()
+
+func _add_interaction_points() -> void:
+	# Adiciona pontos globais quando interage com objetos (E ou P)
+	var gain := randi_range(5, 20)
+	last_gain = gain
+	global_score += gain
+	_update_global_score_label()
+
+func _update_global_score_label() -> void:
+	# Atualiza o label de score global
+	var scene_root: Node = get_tree().get_current_scene()
+	if not scene_root:
+		return
+	var score_label = scene_root.find_child("ScoreLabel", true, false)
+	if score_label and score_label is Label:
+		score_label.text = "Score: %d" % global_score
+		# Animar o score com pulse
+		_animate_score_pulse(score_label)
+		# Mostrar floating text com o ganho
+		_show_point_gain_floating(last_gain)
+
+func _animate_score_pulse(label: Label) -> void:
+	# Anima o score com um scale pulse
+	var original_scale = label.scale
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "scale", original_scale * 1.2, 0.1)
+	tween.tween_property(label, "modulate:a", 1.0, 0.1)
+	await tween.finished
+	tween = create_tween()
+	tween.tween_property(label, "scale", original_scale, 0.15)
+
+func _show_point_gain_floating(points: int) -> void:
+	# Cria um label flutuante mostrando os pontos ganhos
+	var scene_root: Node = get_tree().get_current_scene()
+	if not scene_root:
+		return
+	
+	# Criar canvas layer para floating text
+	var floating_container = CanvasLayer.new()
+	scene_root.add_child(floating_container)
+	
+	# Criar label flutuante
+	var floating_label = Label.new()
+	floating_label.text = "+%d" % points
+	floating_label.add_theme_font_size_override("font_size", 40)
+	floating_label.add_theme_color_override("font_color", Color(0, 1, 0, 1))
+	floating_label.position = Vector2(960, 50)  # Centralizado no topo
+	floating_label.anchor_left = 0.5
+	floating_label.anchor_top = 0.0
+	floating_label.offset_left = -30
+	
+	# Add outline/shadow para melhor visibilidade
+	var label_settings = LabelSettings.new()
+	label_settings.outline_size = 3
+	label_settings.outline_color = Color(0, 0, 0, 1)
+	floating_label.label_settings = label_settings
+	
+	floating_container.add_child(floating_label)
+	
+	# Animar: subir e desaparecer
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(floating_label, "position:y", floating_label.position.y - 80, 1.0)
+	tween.tween_property(floating_label, "modulate:a", 0.0, 1.0)
+	
+	await tween.finished
+	floating_container.queue_free()
 
 func _create_hole_and_suck_objects():
 	# Transformar a Pá em buraco
@@ -453,6 +546,11 @@ func _apply_explosion_to_player(player: Node2D):
 	
 	# Marcar o player como explodindo
 	player.set_meta("exploding", true)
+
+	# Bonus de pontos ao explodir: duplica o último ganho aleatório
+	if last_gain > 0:
+		global_score += last_gain
+		_update_global_score_label()
 	
 	# Encontrar o sprite do player
 	if not player.has_node("Sprite2D"):
@@ -573,7 +671,7 @@ func _spawn_new_player_at_top(parent: Node, player_name: String, original_textur
 		new_player.set_script(load("res://player_1.gd"))
 	elif player_name == "Player 2":
 		new_player.set_script(load("res://player_2.gd"))
-	
+
 	# Posicionar no topo com a mesma posição X do antigo
 	new_player.position = Vector2(position_x, -300)
 	
@@ -654,3 +752,56 @@ func _play_random_character_sound(position: Vector2):
 		# Tocar e remover quando terminar
 		sound_player.play()
 		sound_player.finished.connect(func(): sound_player.queue_free())
+
+func _remove_nearby_objects():
+	# Aspirador tem efeito aleatório: remove objetos próximos OU remove cenário (fundo branco)
+	var random_choice = randi() % 2  # 0 ou 1
+	
+	if random_choice == 0:
+		# Efeito 1: Remover objetos próximos
+		var aspirador_pos = global_position
+		var removal_radius = 200.0  # Raio de remoção em pixels
+		
+		# Procurar todos os objetos na cena
+		var all_items = get_parent().get_children()
+		var objects_to_remove = []
+		
+		for item in all_items:
+			if item == self or not item is Node2D:
+				continue
+			
+			if not item.has_node("Sprite2D"):
+				continue
+			
+			var item_pos = item.global_position
+			var distance = aspirador_pos.distance_to(item_pos)
+			
+			# Se estiver dentro do raio de remoção, marcar para remover
+			# Não remover aspirador, buracos ou fogo
+			if distance < removal_radius:
+				if not ("is_hole" in item and item.is_hole):
+					# Verificar se não é fogo
+					var item_sprite = item.get_node("Sprite2D")
+					if item_sprite.texture and not item_sprite.texture.resource_path.contains("Fire.png"):
+						# Não remover outro aspirador
+						if not item_sprite.texture.resource_path.contains("aspirador.png"):
+							objects_to_remove.append(item)
+		
+		# Remover os objetos
+		for item in objects_to_remove:
+			item.queue_free()
+	else:
+		# Efeito 2: Aplicar um cenário branco temporário (comando pode trocar depois)
+		var scene_root: Node = get_tree().get_current_scene()
+		var scenario_node: Node = null
+		if scene_root:
+			scenario_node = scene_root.find_child("Scenario", true, false)
+		if scenario_node and scenario_node is Sprite2D:
+			var scenario_sprite: Sprite2D = scenario_node as Sprite2D
+			# Criar uma textura branca simples 1x1 e aplicar
+			var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+			img.fill(Color(1, 1, 1, 1))
+			var white_tex := ImageTexture.create_from_image(img)
+			scenario_sprite.texture = white_tex
+			scenario_sprite.self_modulate = Color(1, 1, 1, 1)
+			scenario_sprite.visible = true

@@ -142,6 +142,9 @@ func _do_switch() -> void:
 		var random_sound = achievement_sounds[randi() % achievement_sounds.size()]
 		switch_sound.stream = random_sound
 		switch_sound.play()
+	
+	# 🎯 ADICIONAR PONTOS AO SCORE GLOBAL
+	_add_switch_points()
 
 
 # ------------------------------------------------------------
@@ -226,6 +229,9 @@ func _spawn_single_item():
 	# armazena o índice aleatório
 	item.tex_index = random_index
 
+	# Adicionar pontos ao interagir com a roleta via teclado
+	_add_interaction_points()
+
 	# seta a textura no Sprite2D se existir e ajusta escala
 	if item.has_node("Sprite2D"):
 		var s = item.get_node("Sprite2D")
@@ -261,5 +267,43 @@ func _spawn_single_item():
 		item.target_position = Vector2(sprite_right.global_position.x, target.global_position.y)
 	else:
 		item.target_position = Vector2(sprite_right.global_position.x, sprite_right.global_position.y + 300)
+
+func _add_switch_points() -> void:
+	# Adiciona pontos ao score global quando a roleta troca de lado
+	var scene_root: Node = get_tree().get_current_scene()
+	if not scene_root:
+		return
+	
+	# Procurar qualquer ItemFall na cena para acessar o score global
+	var item_fall = scene_root.find_child("ItemFall", true, false)
+	if item_fall:
+		# Adicionar pontos aleatórios
+		var gain := randi_range(5, 20)
+		item_fall.last_gain = gain
+		item_fall.global_score += gain
+		
+		# Atualizar o label
+		var score_label = scene_root.find_child("ScoreLabel", true, false)
+		if score_label and score_label is Label:
+			score_label.text = "Score: %d" % item_fall.global_score
+
+func _add_interaction_points() -> void:
+	# Adiciona pontos ao score global quando interage com a roleta via teclado (E ou P)
+	var scene_root: Node = get_tree().get_current_scene()
+	if not scene_root:
+		return
+	
+	# Procurar qualquer ItemFall na cena para acessar o score global
+	var item_fall = scene_root.find_child("ItemFall", true, false)
+	if item_fall:
+		# Adicionar pontos aleatórios
+		var gain := randi_range(5, 20)
+		item_fall.last_gain = gain
+		item_fall.global_score += gain
+		
+		# Atualizar o label
+		var score_label = scene_root.find_child("ScoreLabel", true, false)
+		if score_label and score_label is Label:
+			score_label.text = "Score: %d" % item_fall.global_score
 
 	# target_position já definido abaixo
