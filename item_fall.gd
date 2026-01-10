@@ -307,9 +307,15 @@ func _create_hole_and_suck_objects():
 		if has_node("CollisionShape2D"):
 			var collision = get_node("CollisionShape2D")
 			if collision.shape is CircleShape2D:
-				# Aumentar o raio para cobrir toda a área visível do buraco
-				# Assumindo que a textura original tem um certo tamanho, multiplicar pela escala
-				collision.shape.radius = 60.0  # Raio maior para cobrir toda a área
+				# Raio como círculo circunscrito ao retângulo da textura (cobre toda a imagem)
+				var tex_sz = buraco_texture.get_size()
+				var scaled_w = float(tex_sz.x) * sprite.scale.x
+				var scaled_h = float(tex_sz.y) * sprite.scale.y
+				collision.shape.radius = 0.5 * sqrt(scaled_w * scaled_w + scaled_h * scaled_h)
+			elif collision.shape is RectangleShape2D:
+				# Ajustar tamanho do retângulo ao tamanho visível da textura (já com scale)
+				var tex_sz_r = buraco_texture.get_size()
+				collision.shape.size = Vector2(float(tex_sz_r.x) * sprite.scale.x, float(tex_sz_r.y) * sprite.scale.y)
 		
 		tex_index = -1
 		# Marcar como buraco (não interativo)
@@ -365,19 +371,42 @@ func _check_hole_collisions():
 		hole_collision = get_node("CollisionShape2D")
 	
 	if not hole_collision or not hole_collision.shape:
-		return
+		# Se não houver collision shape configurado, tentar calcular pela textura
+		var fallback_sprite: Sprite2D = null
+		if has_node("Sprite2D"):
+			fallback_sprite = get_node("Sprite2D")
+		if fallback_sprite and fallback_sprite.texture:
+			var tex_sz_fb = fallback_sprite.texture.get_size()
+			var hole_radius_fb = max(float(tex_sz_fb.x) * fallback_sprite.scale.x, float(tex_sz_fb.y) * fallback_sprite.scale.y) * 0.5
+			# Continuar usando este raio de fallback
+			# Código abaixo usa hole_radius calculado
+		else:
+			return
 	
 	var hole_pos = global_position
 	var screen_mid = get_viewport_rect().size.x / 2
 	
 	# Obter o raio do collision shape do buraco
 	var hole_radius = 0.0
-	if hole_collision.shape is CircleShape2D:
+	if hole_collision and hole_collision.shape is CircleShape2D:
+		# Raio já corresponde ao círculo circunscrito (ajustado em _create_hole_and_suck_objects)
 		hole_radius = hole_collision.shape.radius
-		# Multiplicar pelo scale do sprite se houver
+	elif hole_collision and hole_collision.shape is RectangleShape2D:
+		# Usar raio do círculo circunscrito ao retângulo configurado
+		var size_rect = hole_collision.shape.size
+		hole_radius = 0.5 * sqrt(size_rect.x * size_rect.x + size_rect.y * size_rect.y)
+	else:
+		# Fallback para textura se acima não disponível
+		var sprite_node2: Sprite2D = null
 		if has_node("Sprite2D"):
-			var sprite_node = get_node("Sprite2D")
-			hole_radius *= max(sprite_node.scale.x, sprite_node.scale.y)
+			sprite_node2 = get_node("Sprite2D")
+		if sprite_node2 and sprite_node2.texture:
+			var tex_sz2 = sprite_node2.texture.get_size()
+			var scaled_w2 = float(tex_sz2.x) * sprite_node2.scale.x
+			var scaled_h2 = float(tex_sz2.y) * sprite_node2.scale.y
+			hole_radius = 0.5 * sqrt(scaled_w2 * scaled_w2 + scaled_h2 * scaled_h2)
+		else:
+			return
 	
 	var all_items = get_parent().get_children()
 	
@@ -502,6 +531,25 @@ func _check_fire_collision_with_players() -> void:
 	var player1 = scene_root.find_child("Player 1", true, false)
 	var player2 = scene_root.find_child("Player 2", true, false)
 	
+	# Debug: mostrar o que encontrou
+	if player1:
+		var p1_state = "visible: %s, in_tree: %s, has_exploding: %s" % [player1.visible, player1.is_inside_tree(), player1.has_meta("exploding")]
+		print("🔍 Player 1 encontrado - %s" % p1_state)
+	else:
+		print("🔍 Player 1 NÃO encontrado")
+	
+	if player2:
+		var p2_state = "visible: %s, in_tree: %s, has_exploding: %s" % [player2.visible, player2.is_inside_tree(), player2.has_meta("exploding")]
+		print("🔍 Player 2 encontrado - %s" % p2_state)
+	else:
+		print("🔍 Player 2 NÃO encontrado")
+	
+	# Garantir que os players estão visíveis (elimina players antigos)
+	if player1 and not player1.visible:
+		player1 = null
+	if player2 and not player2.visible:
+		player2 = null
+	
 	var closest_player = null
 	var closest_distance = 999999.0
 	
@@ -519,35 +567,20 @@ func _check_fire_collision_with_players() -> void:
 			closest_distance = distance
 			closest_player = player2
 	
-	# Aplicar explosão apenas se estiver tocando (distância pós-raio <= 0) e não estiver explodindo
-	if closest_player and closest_distance <= 0.0 and not closest_player.has_meta("exploding"):
-		await _apply_explosion_to_player(closest_player)
-		# O fogo será removido no final de _apply_explosion_to_player
+	# Aplicar explosão se estiver perto (ajustado para escala 3x da cena)
+	if closest_player and closest_distance <= 300.0:
+		if not closest_player.has_meta("exploding"):
+			await _apply_explosion_to_player(closest_player)
+		else:
+			print("⏭ ", closest_player.name, " já tem meta exploding ativa")
 
 func _calculate_distance_to_player(player: Node2D) -> float:
-	# Considerar raios (tamanho/escala) para contato real entre sprites
+	# Distância simples entre fogo e player
 	var fire_pos = global_position
-	var fire_radius = 40.0
-	if has_node("Sprite2D"):
-		var fire_sprite: Node2D = get_node("Sprite2D")
-		if fire_sprite is Sprite2D and fire_sprite.texture:
-			var f_tex: Texture2D = fire_sprite.texture
-			var f_size = f_tex.get_size() * fire_sprite.scale.abs()
-			fire_pos = fire_sprite.global_position
-			fire_radius = max(f_size.x, f_size.y) * 0.5
-
 	var player_pos = player.global_position
-	var player_radius = 40.0
 	if player.has_node("Sprite2D"):
-		var player_sprite: Node2D = player.get_node("Sprite2D")
-		if player_sprite is Sprite2D and player_sprite.texture:
-			var p_tex: Texture2D = player_sprite.texture
-			var p_size = p_tex.get_size() * player_sprite.scale.abs()
-			player_pos = player_sprite.global_position
-			player_radius = max(p_size.x, p_size.y) * 0.5
-
-	var center_distance = fire_pos.distance_to(player_pos)
-	return center_distance - (player_radius + fire_radius)
+		player_pos = player.get_node("Sprite2D").global_position
+	return fire_pos.distance_to(player_pos)
 
 func _apply_explosion_to_player(player: Node2D):
 	# Verificar se o player já está explodindo (evitar duplicações)
@@ -557,8 +590,6 @@ func _apply_explosion_to_player(player: Node2D):
 	
 	# Marcar o player como explodindo
 	player.set_meta("exploding", true)
-	# Marcar ESTE fogo para não ser removido durante a limpeza (senão o código para)
-	set_meta("processando_explosao", true)
 	print("💥 Iniciando explosão para: ", player.name)
 
 	# Bonus de pontos ao explodir: duplica o último ganho aleatório
@@ -660,7 +691,10 @@ func _apply_explosion_to_player(player: Node2D):
 	var animation_complete = false
 	var timeout_reached = false
 	
-	animation_signal.connect(func(): animation_complete = true)
+	var on_animation_finished = func():
+		animation_complete = true
+	
+	animation_signal.connect(on_animation_finished)
 	
 	while not animation_complete and not timeout_reached:
 		await get_tree().process_frame
@@ -684,13 +718,16 @@ func _apply_explosion_to_player(player: Node2D):
 	
 	# Remover o player antigo
 	if is_instance_valid(player):
-		player.set_meta("exploding", false)
+		player.remove_meta("exploding")  # Remover ANTES de destruir
 		player.queue_free()
 	
 	# Criar novo player DIRETAMENTE
-	print("🔄 Criando novo player: ", player_name)
 	var new_player = CharacterBody2D.new()
 	new_player.name = player_name
+	
+	# Garantir que não tem meta exploding
+	if new_player.has_meta("exploding"):
+		new_player.remove_meta("exploding")
 	
 	# Adicionar Sprite2D
 	var new_sprite = Sprite2D.new()
@@ -734,18 +771,19 @@ func _apply_explosion_to_player(player: Node2D):
 	new_player.position = Vector2(-1.75, -300)
 	new_player.velocity = Vector2.ZERO
 	new_player.visible = true
+	# Garantir que não tem meta exploding
+	if new_player.has_meta("exploding"):
+		new_player.remove_meta("exploding")
 	print("🔍 new_player.position (local): ", new_player.position)
 	
 	# Adicionar à cena
 	var target_parent = player_parent if is_instance_valid(player_parent) else get_tree().get_current_scene()
 	if is_instance_valid(target_parent):
 		target_parent.add_child(new_player)
-		print("✅ ", player_name, " respawned at position: ", new_player.position)
+		await get_tree().process_frame
+		print("✅ Novo player ", player_name, " adicionado à cena e processado")
 	else:
 		print("⚠ Não foi possível encontrar parent para respawn")
-	
-	# Remover este fogo
-	queue_free()
 
 func _spawn_new_player_at_top(parent: Node, player_name: String, original_texture: Texture2D, position_x: float, sprite_pos: Vector2, sprite_scale: Vector2, sprite_flip_h: bool, collision_data: Dictionary) -> void:
 	# Esperar um frame para garantir que o antigo player foi removido da árvore
@@ -810,7 +848,7 @@ func _spawn_new_player_at_top(parent: Node, player_name: String, original_textur
 	print("   - global_position: ", new_player.global_position)
 	print("   - position: ", new_player.position)
 	print("   - visible: ", new_player.visible)
-	print("   - parent: ", new_player.get_parent().name if new_player.get_parent() else "none")
+	print("   - parent: ", str(new_player.get_parent().name) if new_player.get_parent() else "none")
 	print("   - está na árvore: ", is_instance_valid(new_player) and new_player.is_inside_tree())
 
 func _spawn_new_player_with_animation(old_player: Node2D, original_texture: Texture2D):
@@ -887,9 +925,6 @@ func _remove_all_items_except_roleta():
 				var s = node.get_node("Sprite2D")
 				if s.texture and s.texture.resource_path.contains("roleta.png"):
 					keep_node = true
-			# Não remover o fogo que está processando a explosão
-			if node.has_meta("processando_explosao"):
-				keep_node = true
 			if not keep_node:
 				node.queue_free()
 				removed += 1
