@@ -9,6 +9,15 @@ var target_object: RigidBody2D = null
 var held_object: RigidBody2D = null
 var holding := false
 
+# --- Player animation (walk/jump) ---
+@onready var player_sprite: Sprite2D = $Sprite2D
+@onready var TEX_MAN: Texture2D = preload("res://Imagens/Man.png")
+@onready var TEX_MAN2: Texture2D = preload("res://Imagens/man2.png")
+@onready var TEX_JUMP: Texture2D = preload("res://Imagens/ManJump.png")
+var _walk_accum := 0.0
+var _walk_toggle := false
+const WALK_SWAP_TIME := 0.15
+
 
 
 @onready var hand_position: Marker2D = $HandPosition
@@ -38,6 +47,9 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 
 	move_and_slide()
+
+	# Atualiza animação de andar/saltar após mover
+	_update_animation(direction, delta)
 
 	# Sprites follow the hand automatically as children
 
@@ -196,3 +208,24 @@ func _on_range_body_exited(body: Node) -> void:
 	if body.is_in_group("CanGrab") and body == target_object:
 		is_in_range = false
 		target_object = null
+
+# -----------------------------
+# ANIMAÇÃO DE ANDAR/SALTAR
+# -----------------------------
+func _update_animation(direction: float, delta: float) -> void:
+	if player_sprite == null:
+		return
+	# Saltando: sempre usa frame de pulo
+	if not is_on_floor():
+		player_sprite.texture = TEX_JUMP
+		return
+	# Andando: alterna entre Man2 e Man constantemente
+	if direction != 0.0:
+		_walk_accum += delta
+		if _walk_accum >= WALK_SWAP_TIME:
+			_walk_accum = 0.0
+			_walk_toggle = not _walk_toggle
+		player_sprite.texture = (TEX_MAN2 if _walk_toggle else TEX_MAN)
+	else:
+		# Parado: usa Man
+		player_sprite.texture = TEX_MAN
