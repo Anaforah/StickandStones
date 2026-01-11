@@ -44,27 +44,54 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	# Grab
-	if Input.is_action_just_pressed("p2_grab") and is_in_range and target_object and not holding:
-		# Pega a pedra
-		holding = true
-		held_object = target_object
-		held_object.global_position = hand_position.global_position
-		target_object.get_node("CollisionShape2D").position = target_object.original_collision_pos
-		target_object.freeze = true  # congela física
-		target_object.get_node("CollisionShape2D").disabled = true  # desabilita colisão
-		# Reparent rock to hand
-		held_object.get_parent().remove_child(held_object)
-		hand_position.add_child(held_object)
-		held_object.position = Vector2(0, 0)
-		# Reparent sprites to hand
-		var sprite_left = target_object.get_node("rock")
-		var sprite_right = target_object.get_node("roleta")
-		target_object.remove_child(sprite_left)
-		target_object.remove_child(sprite_right)
-		hand_position.add_child(sprite_left)
-		hand_position.add_child(sprite_right)
-		sprite_left.position = Vector2(0, 0)
-		sprite_right.position = Vector2(0, 0)
+	if Input.is_action_just_pressed("p2_grab"):
+		# Se já está agarrando, tenta spawnar ao invés de soltar
+		if holding and held_object:
+			var object_rock_parent = held_object.get_parent()
+			# Se está agarrando uma ItemFall (roleta), chama spawn do ObjectRock pai
+			if object_rock_parent and object_rock_parent.has_method("_spawn_single_item"):
+				# Busca o sprite da roleta para pegar a posição correta
+				var roleta_sprite = held_object.get_node_or_null("roleta")
+				if roleta_sprite:
+					object_rock_parent._spawn_single_item(roleta_sprite.global_position)
+				else:
+					object_rock_parent._spawn_single_item()
+		# Senão, tenta agarrar um novo objeto
+		elif is_in_range and target_object and not holding:
+			# Pega a pedra
+			holding = true
+			held_object = target_object
+			# Se for ItemFall (roleta), permite spawn ao agarrar
+			var object_rock_parent = held_object.get_parent()
+			# Reseta flags quando agarrada
+			if "is_thrown" in held_object:
+				held_object.is_thrown = false
+				held_object.last_side = ""
+				if "sprite_switched" in held_object:
+					held_object.sprite_switched = false
+			# Busca o ObjectRock pai desta pedra específica
+			if object_rock_parent and "switched" in object_rock_parent:
+				object_rock_parent.switched = false
+			held_object.global_position = hand_position.global_position
+			target_object.get_node("CollisionShape2D").position = target_object.original_collision_pos
+			target_object.freeze = true  # congela física
+			target_object.get_node("CollisionShape2D").disabled = true  # desabilita colisão
+			# Reparent rock to hand
+			held_object.get_parent().remove_child(held_object)
+			hand_position.add_child(held_object)
+			held_object.position = Vector2(0, 0)
+			# Reparent sprites to hand
+			var sprite_left = target_object.get_node("rock")
+			var sprite_right = target_object.get_node("roleta")
+			target_object.remove_child(sprite_left)
+			target_object.remove_child(sprite_right)
+			hand_position.add_child(sprite_left)
+			hand_position.add_child(sprite_right)
+			sprite_left.position = Vector2(0, 0)
+			sprite_right.position = Vector2(0, 0)
+			# Aumenta escala quando na mão
+			sprite_left.scale = Vector2(0.3, 0.3)
+			sprite_right.scale = Vector2(0.3, 0.3)
 
 	# Drop
 	if Input.is_action_just_pressed("p2_drop") and holding:
@@ -88,6 +115,9 @@ func _process(_delta: float) -> void:
 		# Center sprites at rock's position (hand position)
 		sprite_left.position = Vector2(0, 0)
 		sprite_right.position = Vector2(0, 0)
+		# Restaura escala pequena
+		sprite_left.scale = Vector2(0.0865528, 0.081169344)
+		sprite_right.scale = Vector2(0.0865528, 0.081169344)
 		held_object = null
 
 	# Throw
@@ -102,16 +132,22 @@ func _process(_delta: float) -> void:
 		hand_position.remove_child(held_object)
 		get_tree().current_scene.add_child(held_object)
 
-		# posição inicial = mão
-		held_object.global_position = hand_position.global_position
-
+		# posição inicial ligeiramente à frente da mão
+		held_object.global_position = hand_position.global_position + Vector2(dir * 20, 0)
+		
 		# reativa física
 		held_object.freeze = false
 		held_object.linear_velocity = Vector2.ZERO
 		held_object.angular_velocity = 0
 		held_object.get_node("CollisionShape2D").disabled = false
 		held_object.get_node("CollisionShape2D").position = Vector2(0, 0)
-
+		
+		# Desativa modo de queda se for ItemFall
+		if "is_falling_mode" in held_object:
+			held_object.is_falling_mode = false
+			held_object.gravity_scale = 1  # Restaura gravidade normal
+			held_object.lock_rotation = false
+		
 		# Reparent sprites back
 		var sprite_left = hand_position.get_node("rock")
 		var sprite_right = hand_position.get_node("roleta")
@@ -121,11 +157,31 @@ func _process(_delta: float) -> void:
 		held_object.add_child(sprite_right)
 		sprite_left.position = Vector2(0, 0)
 		sprite_right.position = Vector2(0, 0)
+		# Restaura escala pequena ao lançar
+		sprite_left.scale = Vector2(0.0865528, 0.081169344)
+		sprite_right.scale = Vector2(0.0865528, 0.081169344)
 
 		# arco real (sprite + collision juntos)
-		held_object.linear_velocity = Vector2(dir * 400, -300)
-
+		held_object.linear_velocity = Vector2(dir * 800, 0)
+		# Permite passar por paredes quando lançada
+		held_object.collision_mask = 0
+		# Marca como lançada para limitar às margens
+		if "is_thrown" in held_object:
+			held_object.is_thrown = true
+		
+		# Reseta switched para permitir próxima troca
+		var object_rock_parent = held_object.get_parent()
+		if object_rock_parent and "switched" in object_rock_parent:
+			object_rock_parent.switched = false
+		
 		held_object = null
+	
+	# Interagir com roleta (ItemFall) para spawnar objetos
+	if Input.is_action_just_pressed("use_item") and holding and held_object:
+		var object_rock_parent = held_object.get_parent()
+		# Se está agarrando uma ItemFall (roleta), chama spawn do ObjectRock pai
+		if object_rock_parent and object_rock_parent.has_method("_spawn_single_item"):
+			object_rock_parent._spawn_single_item()
 
 
 # -----------------------------

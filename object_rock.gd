@@ -4,7 +4,6 @@ extends Node2D
 @onready var sprite_right: Sprite2D = $roleta
 @onready var switch_sound: AudioStreamPlayer2D = $switch_sound
 
-var dragging := false
 var switched := false
 var side := ""
 
@@ -56,59 +55,28 @@ func _load_object_textures():
 		push_error("⚠ ERRO: Pasta res://Imagens/Objetos/ não encontrada!")
 
 func _input(event):
-	# Verificar teclas E e P apenas quando estiver a pressionar a roleta (dragging)
-	if event is InputEventKey:
-		if event.pressed and not event.echo and dragging:
-			# Tecla E pressionada (lado esquerdo)
-			if event.keycode == KEY_E:
-				if sprite_right.visible:
-					var screen_mid = get_viewport_rect().size.x / 2
-					var roleta_x = sprite_right.global_position.x
-					if roleta_x < screen_mid:
-						_spawn_single_item()
-			# Tecla P pressionada (lado direito)
-			elif event.keycode == KEY_P:
-				if sprite_right.visible:
-					var screen_mid = get_viewport_rect().size.x / 2
-					var roleta_x = sprite_right.global_position.x
-					if roleta_x >= screen_mid:
-						_spawn_single_item()
-	
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			# Verifica se iniciou drag
-			if (sprite_left.visible and sprite_left.get_rect().has_point(sprite_left.to_local(event.position))) \
-			or (sprite_right.visible and sprite_right.get_rect().has_point(sprite_right.to_local(event.position))):
-				dragging = true
-		else:
-			dragging = false
+	# Tecla R, SPACE ou T para spawnar item
+	if event is InputEventKey and event.pressed and not event.echo:
+		print("Tecla pressionada: ", event.keycode, " (R=82, SPACE=32, T=84)")
+		# Múltiplas teclas para spawnar
+		if event.keycode == KEY_R or event.keycode == KEY_SPACE or event.keycode == KEY_T:
+			print("🔥 SPAWNING ITEM!")
+			_spawn_single_item()
 
 
 func _process(_delta):
-	if dragging:
-		var mouse_pos = get_global_mouse_position()
+	# Verifica se a pedra cruzou para o outro lado
+	if not switched:
+		var screen_width = get_viewport_rect().size.x
+		var current_sprite = sprite_left if sprite_left.visible else sprite_right
+		var current_x = current_sprite.global_position.x
 		
-		if not switched:
-			# Movimento normal antes da troca
-			if sprite_left.visible:
-				sprite_left.global_position = mouse_pos
-			else:
-				sprite_right.global_position = mouse_pos
-			
-			_check_switch(mouse_pos)
-		else:
-			# Depois da troca: bloquear movimento do outro lado
-			var screen_width = get_viewport_rect().size.x
-
-			if side == "left":
-				mouse_pos.x = max(screen_width / 2, mouse_pos.x)
-			else:
-				mouse_pos.x = min(screen_width / 2, mouse_pos.x)
-
-			if sprite_right.visible:
-				sprite_right.global_position = mouse_pos
-			else:
-				sprite_left.global_position = mouse_pos
+		# Se começou no lado esquerdo e cruzou para o direito
+		if side == "left" and current_x >= screen_width / 2:
+			_do_switch()
+		# Se começou no lado direito e cruzou para o esquerdo
+		elif side == "right" and current_x <= screen_width / 2:
+			_do_switch()
 
 
 func _check_switch(mouse_pos: Vector2) -> void:
@@ -208,7 +176,7 @@ func _spawn_falling_item():
 # ------------------------------------------------------------
 # 🔥 SPAWN ALL: cria um item para cada textura encontrada em Imagens/Objetos
 # ------------------------------------------------------------
-func _spawn_single_item():
+func _spawn_single_item(spawn_position: Vector2 = Vector2.ZERO):
 	# Spawn permitidos em cliques consecutivos — permite múltiplos itens simultâneos
 
 	if object_textures.size() == 0:
@@ -216,7 +184,8 @@ func _spawn_single_item():
 		return
 
 	var screen_mid = get_viewport_rect().size.x / 2
-	var roleta_x = sprite_right.global_position.x
+	# Se não recebeu posição, usa a posição da sprite_right original
+	var roleta_x = spawn_position.x if spawn_position != Vector2.ZERO else sprite_right.global_position.x
 
 	# escolhe textura aleatória (totalmente random)
 	var random_index = randi() % object_textures.size()
@@ -254,7 +223,11 @@ func _spawn_single_item():
 	# posiciona um pouco acima da roleta (mesma coluna X) para garantir queda vertical
 	var spawn_y = sprite_right.global_position.y - 300
 	add_child(item)
-	item.global_position = Vector2(sprite_right.global_position.x, spawn_y)
+	item.global_position = Vector2(roleta_x, spawn_y)
+	
+	# Descongelar para permitir queda
+	item.freeze = false
+	item.gravity_scale = 1.0
 
 	# Define destino: mantém x da roleta (queda vertical) e y do "chão" (player)
 	var target: Node2D = null
@@ -264,46 +237,14 @@ func _spawn_single_item():
 		target = get_parent().get_node("player2")
 
 	if target:
-		item.target_position = Vector2(sprite_right.global_position.x, target.global_position.y)
+		item.target_position = Vector2(roleta_x, target.global_position.y)
 	else:
-		item.target_position = Vector2(sprite_right.global_position.x, sprite_right.global_position.y + 300)
+		item.target_position = Vector2(roleta_x, sprite_right.global_position.y + 300)
 
 func _add_switch_points() -> void:
-	# Adiciona pontos ao score global quando a roleta troca de lado
-	var scene_root: Node = get_tree().get_current_scene()
-	if not scene_root:
-		return
-	
-	# Procurar qualquer ItemFall na cena para acessar o score global
-	var item_fall = scene_root.find_child("ItemFall", true, false)
-	if item_fall:
-		# Adicionar pontos aleatórios
-		var gain := randi_range(5, 20)
-		item_fall.last_gain = gain
-		item_fall.global_score += gain
-		
-		# Atualizar o label
-		var score_label = scene_root.find_child("ScoreLabel", true, false)
-		if score_label and score_label is Label:
-			score_label.text = "Score: %d" % item_fall.global_score
+	# Placeholder para futuros pontos (ScoreLabel não existe na cena atual)
+	pass
 
 func _add_interaction_points() -> void:
-	# Adiciona pontos ao score global quando interage com a roleta via teclado (E ou P)
-	var scene_root: Node = get_tree().get_current_scene()
-	if not scene_root:
-		return
-	
-	# Procurar qualquer ItemFall na cena para acessar o score global
-	var item_fall = scene_root.find_child("ItemFall", true, false)
-	if item_fall:
-		# Adicionar pontos aleatórios
-		var gain := randi_range(5, 20)
-		item_fall.last_gain = gain
-		item_fall.global_score += gain
-		
-		# Atualizar o label
-		var score_label = scene_root.find_child("ScoreLabel", true, false)
-		if score_label and score_label is Label:
-			score_label.text = "Score: %d" % item_fall.global_score
-
-	# target_position já definido abaixo
+	# Placeholder para futuros pontos (ScoreLabel não existe na cena atual)
+	pass

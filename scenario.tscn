@@ -1,14 +1,16 @@
-[gd_scene load_steps=20 format=3 uid="uid://bh1uemrm3v7ww"]
+[gd_scene load_steps=21 format=3 uid="uid://bh1uemrm3v7ww"]
 
 [ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenarios/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cmbvarul6v7bi" path="res://player_1.gd" id="2_a05x2"]
 [ext_resource type="Texture2D" uid="uid://bwymi5bom7h4f" path="res://Imagens/Man.png" id="3_6dm4g"]
 [ext_resource type="Script" uid="uid://dfv7iid10ab86" path="res://player_2.gd" id="3_a05x2"]
 [ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_s7a3y"]
+[ext_resource type="Script" uid="uid://dbk1bfjl2b57d" path="res://grabbable_rock.gd" id="5_grabrock"]
 [ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
 [ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://Imagens/roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
 [ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
+[ext_resource type="PackedScene" uid="uid://grabbable_rock_001" path="res://GrabbableRock.tscn" id="9_grab"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a05x2"]
 size = Vector2(1919.9094, 56.802795)
@@ -27,6 +29,12 @@ gradient = SubResource("Gradient_67p4d")
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_67p4d"]
 size = Vector2(90, 283.5)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_rock"]
+radius = 40.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_range"]
+radius = 150.0
 
 [sub_resource type="Animation" id="Animation_p3jsh"]
 length = 0.001
@@ -176,6 +184,15 @@ texture = ExtResource("3_6dm4g")
 position = Vector2(143.75, 117.25)
 shape = SubResource("RectangleShape2D_67p4d")
 
+[node name="HandPosition" type="Marker2D" parent="AnimationPlayer/Player 1"]
+position = Vector2(139.75, 82)
+
+[node name="Range" type="Area2D" parent="AnimationPlayer/Player 1"]
+position = Vector2(139.75, 106)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer/Player 1/Range"]
+shape = SubResource("CircleShape2D_range")
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="AnimationPlayer/Player 1"]
 root_node = NodePath("../Sprite2D")
 libraries = {
@@ -198,6 +215,15 @@ flip_h = true
 position = Vector2(1132.8125, 112)
 shape = SubResource("RectangleShape2D_03rl8")
 
+[node name="HandPosition" type="Marker2D" parent="AnimationPlayer2/Player 2"]
+position = Vector2(1126.75, 81)
+
+[node name="Range" type="Area2D" parent="AnimationPlayer2/Player 2"]
+position = Vector2(1126.75, 105)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AnimationPlayer2/Player 2/Range"]
+shape = SubResource("CircleShape2D_range")
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="AnimationPlayer2/Player 2"]
 root_node = NodePath("../Sprite2D")
 libraries = {
@@ -207,7 +233,29 @@ libraries = {
 [node name="ObjectRock" type="Node2D" parent="."]
 script = ExtResource("4_s7a3y")
 
+[node name="GrabbableRockPhysics" type="RigidBody2D" parent="ObjectRock" groups=["CanGrab"]]
+position = Vector2(42.333332, 208.66669)
+mass = 5.0
+gravity_scale = 0.0
+freeze = true
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("5_grabrock")
+
+[node name="rock" type="Sprite2D" parent="ObjectRock/GrabbableRockPhysics"]
+scale = Vector2(0.08331547, 0.07813338)
+texture = ExtResource("5_a05x2")
+
+[node name="roleta" type="Sprite2D" parent="ObjectRock/GrabbableRockPhysics"]
+visible = false
+scale = Vector2(0.08304072, 0.08457031)
+texture = ExtResource("6_a05x2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ObjectRock/GrabbableRockPhysics"]
+shape = SubResource("CircleShape2D_rock")
+
 [node name="rock" type="Sprite2D" parent="ObjectRock"]
+visible = false
 position = Vector2(42.333332, 208.66669)
 scale = Vector2(0.08331547, 0.07813338)
 texture = ExtResource("5_a05x2")
@@ -223,7 +271,29 @@ volume_db = 10.097
 [node name="ObjectRock2" type="Node2D" parent="."]
 script = ExtResource("4_s7a3y")
 
+[node name="GrabbableRockPhysics" type="RigidBody2D" parent="ObjectRock2" groups=["CanGrab"]]
+position = Vector2(384.6667, 207.66667)
+mass = 5.0
+gravity_scale = 0.0
+freeze = true
+collision_layer = 1
+collision_mask = 1
+script = ExtResource("5_grabrock")
+
+[node name="rock" type="Sprite2D" parent="ObjectRock2/GrabbableRockPhysics"]
+scale = Vector2(0.0865528, 0.081169344)
+texture = ExtResource("5_a05x2")
+
+[node name="roleta" type="Sprite2D" parent="ObjectRock2/GrabbableRockPhysics"]
+visible = false
+scale = Vector2(0.0865528, 0.081169344)
+texture = ExtResource("6_a05x2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ObjectRock2/GrabbableRockPhysics"]
+shape = SubResource("CircleShape2D_rock")
+
 [node name="rock" type="Sprite2D" parent="ObjectRock2"]
+visible = false
 position = Vector2(384.6667, 207.66667)
 scale = Vector2(0.0865528, 0.081169344)
 texture = ExtResource("5_a05x2")
@@ -244,3 +314,9 @@ volume_db = 10.097
 stream = ExtResource("7_6dm4g")
 volume_db = -15.0
 autoplay = true
+
+[node name="TestRock1" parent="." instance=ExtResource("9_grab")]
+position = Vector2(400, 600)
+
+[node name="TestRock2" parent="." instance=ExtResource("9_grab")]
+position = Vector2(800, 600)
