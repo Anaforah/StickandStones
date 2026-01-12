@@ -169,6 +169,9 @@ func _process(delta):
 					_play_random_object_sound()
 					# Adicionar pontos
 					_add_interaction_points()
+				# Camara -> mostra popup de permissão e tira foto
+				elif path == "res://Imagens/Objetos/camara.png":
+					_handle_camera_interaction()
 		var mouse_pos = get_global_mouse_position()
 		global_position = mouse_pos + drag_offset
 
@@ -1027,5 +1030,131 @@ func _remove_nearby_objects():
 			img.fill(Color(1, 1, 1, 1))
 			var white_tex := ImageTexture.create_from_image(img)
 			scenario_sprite.texture = white_tex
-			scenario_sprite.self_modulate = Color(1, 1, 1, 1)
-			scenario_sprite.visible = true
+
+func _handle_camera_interaction():
+	# Random: 50% popup de foto, 50% explodir outro jogador
+	var random_choice = randi() % 2
+	
+	if random_choice == 0:
+		# Opção 1: Mostra popup de permissão de câmara e tira foto
+		var permission_popup_scene = load("res://camera_permission_popup.tscn")
+		var permission_popup = permission_popup_scene.instantiate()
+		
+		# Adicionar popup à cena
+		get_tree().get_current_scene().add_child(permission_popup)
+		
+		# Conectar aos sinais
+		permission_popup.permission_granted.connect(_on_camera_permission_granted)
+		permission_popup.permission_denied.connect(_on_camera_permission_denied)
+		
+		print("📷 Mostrando popup de permissão de câmara")
+	else:
+		# Opção 2: Explodir o outro jogador (efeito de fogo)
+		_explode_other_player()
+		# Tocar som aleatório
+		_play_random_object_sound()
+		# Adicionar pontos
+		_add_interaction_points()
+		
+		print("💥 Câmara explodiu o outro jogador!")
+
+func _on_camera_permission_granted():
+	# Acesso à câmara permitido - capturar foto
+	_capture_camera_photo()
+	# Tocar som aleatório
+	_play_random_object_sound()
+	# Adicionar pontos
+	_add_interaction_points()
+
+func _on_camera_permission_denied():
+	# Mesmo negando, tira foto e coloca como background
+	_capture_camera_photo()
+	# Tocar som aleatório
+	_play_random_object_sound()
+	# Adicionar pontos
+	_add_interaction_points()
+
+func _capture_camera_photo():
+	# NOTA: Godot 4 em desktop (macOS/Windows/Linux) tem suporte limitado para webcam
+	# Em mobile funciona melhor. Para desktop, usamos screenshot como alternativa
+	
+	# Tentar usar CameraServer (funciona principalmente em mobile)
+	var feeds = CameraServer.feeds()
+	print("📷 Câmaras disponíveis: ", feeds.size())
+	
+	if feeds.size() > 0:
+		var feed = feeds[0]
+		print("📷 Nome da câmara: ", feed.get_name())
+		feed.set_active(true)
+		
+		# Aguardar câmara inicializar
+		await get_tree().create_timer(1.0).timeout
+		
+		var feed_image = feed.get_texture(CameraServer.FEED_RGBA_IMAGE)
+		if feed_image:
+			var img = feed_image.get_image()
+			if img and img.get_width() > 1 and img.get_height() > 1:
+				var captured_texture = ImageTexture.create_from_image(img)
+				
+				# Aplicar ao cenário
+				var scene_root: Node = get_tree().get_current_scene()
+				var scenario_node = scene_root.find_child("Scenario", true, false)
+				
+				if scenario_node and scenario_node is Sprite2D:
+					var scenario_sprite: Sprite2D = scenario_node as Sprite2D
+					scenario_sprite.texture = captured_texture
+					print("📷 Foto da webcam aplicada ao cenário!")
+					feed.set_active(false)
+					return
+	
+	# Fallback: usar screenshot (mais confiável em desktop)
+	print("📷 Usando screenshot do jogo como alternativa")
+	_fallback_viewport_capture()
+
+func _fallback_viewport_capture():
+	# Fallback: capturar viewport se câmara não estiver disponível
+	var viewport = get_viewport()
+	var img = viewport.get_texture().get_image()
+	
+	if img:
+		var captured_texture = ImageTexture.create_from_image(img)
+		
+		var scene_root: Node = get_tree().get_current_scene()
+		var scenario_node: Node = null
+		if scene_root:
+			scenario_node = scene_root.find_child("Scenario", true, false)
+		
+		if scenario_node and scenario_node is Sprite2D:
+			var scenario_sprite: Sprite2D = scenario_node as Sprite2D
+			scenario_sprite.texture = captured_texture
+			print("📷 Screenshot aplicado ao cenário!")
+	else:
+		print("⚠ Erro ao capturar imagem")
+
+func _explode_other_player():
+	# Determinar qual lado está o objeto (câmara)
+	var screen_mid = get_viewport_rect().size.x / 2
+	var camera_is_left = global_position.x < screen_mid
+	
+	# Procurar o jogador do lado oposto
+	var scene_root = get_tree().get_current_scene()
+	var target_player: Node2D = null
+	
+	# Procurar Player 1 e Player 2
+	var player1 = scene_root.find_child("Player 1", true, false)
+	var player2 = scene_root.find_child("Player 2", true, false)
+	
+	# Se câmara está à esquerda, explodir Player 2 (direita)
+	# Se câmara está à direita, explodir Player 1 (esquerda)
+	if camera_is_left:
+		target_player = player2
+		print("💥 Câmara à esquerda, explodindo Player 2 (direita)")
+	else:
+		target_player = player1
+		print("💥 Câmara à direita, explodindo Player 1 (esquerda)")
+	
+	# Aplicar explosão ao jogador alvo
+	if target_player:
+		_apply_explosion_to_player(target_player)
+	else:
+		print("⚠ Jogador alvo não encontrado para explosão")
