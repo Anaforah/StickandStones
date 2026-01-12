@@ -4,9 +4,15 @@ func _ready():
 	print("===== Árvore de Nodes na execução =====")
 	_print_tree(self, 0)
 	print("=======================================")
+	# Adicionar controlador de cursor do gamepad (segundo rato)
+	var gp_cursor = load("res://gamepad_cursor.gd").new()
+	add_child(gp_cursor)
 
 func _print_tree(node, indent):
-	print(" " * indent, node.name, " | ", node)
+	var prefix := ""
+	for i in range(indent):
+		prefix += " "
+	print(prefix, node.name, " | ", node)
 	for child in node.get_children():
 		_print_tree(child, indent + 2)
 

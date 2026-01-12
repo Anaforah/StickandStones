@@ -5,8 +5,10 @@ extends Node2D
 @onready var switch_sound: AudioStreamPlayer2D = $switch_sound
 
 var dragging := false
+var gamepad_dragging := false  # Flag separada para drag via gamepad
 var switched := false
 var side := ""
+var initial_position: Vector2 = Vector2.ZERO  # Guardar posição inicial para fixes de drag
 
 var achievement_sounds: Array[AudioStream] = []
 var object_textures: Array[Texture2D] = []
@@ -16,6 +18,9 @@ var next_object_index := 0
 var item_scene: PackedScene = preload("res://ItemFall.tscn")
 
 func _ready():
+	# Guardar posição inicial
+	initial_position = global_position
+	
 	# Carrega todos os sons da pasta achievement
 	_load_achievement_sounds()
 	_load_object_textures()
@@ -85,7 +90,8 @@ func _input(event):
 
 
 func _process(_delta):
-	if dragging:
+	# Ignorar drag do mouse se gamepad está em controle
+	if dragging and not gamepad_dragging:
 		var mouse_pos = get_global_mouse_position()
 		
 		if not switched:
@@ -307,3 +313,33 @@ func _add_interaction_points() -> void:
 			score_label.text = "Score: %d" % item_fall.global_score
 
 	# target_position já definido abaixo
+
+# ===================== GAMEPAD METHODS =====================
+func gamepad_grab() -> void:
+	"""Inicia o drag da pedra/roleta via gamepad"""
+	gamepad_dragging = true
+	dragging = true  # Usar dragging para parar mouse
+	switched = false  # Reset switch para nova ação
+	print("✋ [%s] grab: pos=%s sprite_left.vis=%s sprite_right.vis=%s" % [name, global_position, sprite_left.visible, sprite_right.visible])
+
+func gamepad_release() -> void:
+	"""Termina o drag da pedra/roleta via gamepad"""
+	gamepad_dragging = false
+	dragging = false
+	print("✋ [%s] release: pos=%s sprite_left.vis=%s sprite_right.vis=%s" % [name, global_position, sprite_left.visible, sprite_right.visible])
+
+func gamepad_drag(world_pos: Vector2) -> void:
+	"""Move a pedra/roleta para seguir o cursor do gamepad"""
+	if gamepad_dragging:
+		# Mover os mesmos sprites que mouse drag move, para consistência
+		if sprite_left.visible:
+			sprite_left.global_position = world_pos
+		else:
+			sprite_right.global_position = world_pos
+		
+		# Verificar se passou ao outro lado (switch)
+		_check_switch(world_pos)
+
+func gamepad_activate() -> void:
+	"""Ativa spawn de item ao pressionar X"""
+	_spawn_single_item()

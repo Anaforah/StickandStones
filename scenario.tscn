@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://bh1uemrm3v7ww"]
+[gd_scene load_steps=23 format=3 uid="uid://bh1uemrm3v7ww"]
 
 [ext_resource type="Texture2D" uid="uid://dngsog1h56ch" path="res://Imagens/cenarios/cenario1.png" id="1_fklsw"]
 [ext_resource type="Script" uid="uid://cmbvarul6v7bi" path="res://player_1.gd" id="2_a05x2"]
@@ -6,9 +6,28 @@
 [ext_resource type="Script" uid="uid://dfv7iid10ab86" path="res://player_2.gd" id="3_a05x2"]
 [ext_resource type="Script" uid="uid://b0seb2crr1kbp" path="res://object_rock.gd" id="4_s7a3y"]
 [ext_resource type="Texture2D" uid="uid://b0pb22j7fnebo" path="res://Imagens/Pedra.png" id="5_a05x2"]
-[ext_resource type="Texture2D" uid="uid://owfgknt37pou" path="res://Imagens/roleta.png" id="6_a05x2"]
+[ext_resource type="Texture2D" uid="uid://qvuhsr3i1i6x" path="res://Imagens/roleta.png" id="6_a05x2"]
 [ext_resource type="AudioStream" uid="uid://c0ep3quuqvos4" path="res://Sons/BackgroundMusic/classical-piano-waltz-350054.mp3" id="7_6dm4g"]
 [ext_resource type="PackedScene" uid="uid://c8tyi5nwj7qhi" path="res://ItemFall.tscn" id="8_03rl8"]
+[ext_resource type="Script" uid="uid://6b024rosnxq4" path="res://scenari.gd" id="9_scga7"]
+
+[sub_resource type="StyleBoxFlat" id="PanelStyleBox"]
+bg_color = Color(0.1, 0.1, 0.15, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.55, 0, 1)
+expand_margin_left = 10.0
+expand_margin_top = 6.0
+expand_margin_right = 10.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_score"]
+font_size = 48
+font_color = Color(1, 0.55, 0, 1)
+outline_size = 4
+outline_color = Color(0.1, 0.1, 0.15, 1)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a05x2"]
 size = Vector2(1919.9094, 56.802795)
@@ -84,29 +103,12 @@ _data = {
 &"down": SubResource("Animation_bmpdm")
 }
 
-[sub_resource type="StyleBoxFlat" id="PanelStyleBox"]
-bg_color = Color(0.1, 0.1, 0.15, 0.92)
-border_color = Color(1, 0.55, 0, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-expand_margin_left = 10.0
-expand_margin_top = 6.0
-expand_margin_right = 10.0
-expand_margin_bottom = 6.0
-
-[sub_resource type="LabelSettings" id="LabelSettings_score"]
-font_size = 48
-font_color = Color(1, 0.55, 0, 1)
-outline_size = 4
-outline_color = Color(0.1, 0.1, 0.15, 1)
-
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_03rl8"]
 size = Vector2(83.875, 288)
 
 [node name="scenario" type="Node2D"]
 scale = Vector2(3, 3)
+script = ExtResource("9_scga7")
 metadata/_edit_horizontal_guides_ = [-41.0]
 
 [node name="GlobalScore" type="CanvasLayer" parent="."]

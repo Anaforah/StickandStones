@@ -29,6 +29,15 @@ var drag_offset := Vector2.ZERO
 var prev_side_left := false
 var is_hole := false  # Flag para indicar se o objeto é um buraco (não interativo)
 
+# Gamepad (mantido apenas para compatibilidade; o controle real está em gamepad_cursor.gd)
+static var gamepad_cursor_pos: Vector2 = Vector2.ZERO
+static var gamepad_grabbed_item: Node = null
+var gamepad_dragging := false
+var gamepad_drag_offset := Vector2.ZERO
+var prev_rt_pressed := false
+var prev_lt_pressed := false
+var prev_x_pressed := false
+
 # Score global
 static var global_score: int = 0
 static var last_gain: int = 0
@@ -108,10 +117,16 @@ func _input(event):
 					drag_offset = global_position - event.position
 					# garante que prev_side_left reflete a posição real no momento do início do drag
 					prev_side_left = global_position.x < screen_mid
+					gamepad_grabbed_item = self
+					gamepad_dragging = true
 		else:
 			dragging = false
+			gamepad_grabbed_item = null
+			gamepad_dragging = false
 
 func _process(delta):
+	# Processar input de rato/teclado normalmente; gamepad agora é gerido por gamepad_cursor.gd
+
 	if dragging:
 		# Estado da tecla P (lado direito)
 		var p_down = Input.is_key_pressed(KEY_P)
@@ -380,7 +395,7 @@ func _check_hole_collisions():
 			fallback_sprite = get_node("Sprite2D")
 		if fallback_sprite and fallback_sprite.texture:
 			var tex_sz_fb = fallback_sprite.texture.get_size()
-			var hole_radius_fb = max(float(tex_sz_fb.x) * fallback_sprite.scale.x, float(tex_sz_fb.y) * fallback_sprite.scale.y) * 0.5
+			var _hole_radius_fb = max(float(tex_sz_fb.x) * fallback_sprite.scale.x, float(tex_sz_fb.y) * fallback_sprite.scale.y) * 0.5
 			# Continuar usando este raio de fallback
 			# Código abaixo usa hole_radius calculado
 		else:
@@ -534,19 +549,6 @@ func _check_fire_collision_with_players() -> void:
 	var player1 = scene_root.find_child("Player 1", true, false)
 	var player2 = scene_root.find_child("Player 2", true, false)
 	
-	# Debug: mostrar o que encontrou
-	if player1:
-		var p1_state = "visible: %s, in_tree: %s, has_exploding: %s" % [player1.visible, player1.is_inside_tree(), player1.has_meta("exploding")]
-		print("🔍 Player 1 encontrado - %s" % p1_state)
-	else:
-		print("🔍 Player 1 NÃO encontrado")
-	
-	if player2:
-		var p2_state = "visible: %s, in_tree: %s, has_exploding: %s" % [player2.visible, player2.is_inside_tree(), player2.has_meta("exploding")]
-		print("🔍 Player 2 encontrado - %s" % p2_state)
-	else:
-		print("🔍 Player 2 NÃO encontrado")
-	
 	# Garantir que os players estão visíveis (elimina players antigos)
 	if player1 and not player1.visible:
 		player1 = null
@@ -691,19 +693,18 @@ func _apply_explosion_to_player(player: Node2D):
 	var timeout_timer = get_tree().create_timer(3.0)
 	
 	# Aguardar animação OU timeout, o que vier primeiro
-	var animation_complete = false
-	var timeout_reached = false
+	var state = {"animation_complete": false, "timeout_reached": false}
 	
 	var on_animation_finished = func():
-		animation_complete = true
+		state["animation_complete"] = true
 	
 	animation_signal.connect(on_animation_finished)
 	
-	while not animation_complete and not timeout_reached:
+	while not state["animation_complete"] and not state["timeout_reached"]:
 		await get_tree().process_frame
 		if timeout_timer.time_left <= 0:
 			print("⏱ Timeout na animação de explosão")
-			timeout_reached = true
+			state["timeout_reached"] = true
 	
 	print("✓ Animação de explosão terminada ou timeout")
 
@@ -1158,3 +1159,261 @@ func _explode_other_player():
 		_apply_explosion_to_player(target_player)
 	else:
 		print("⚠ Jogador alvo não encontrado para explosão")
+func _update_gamepad_cursor() -> void:
+	# Atualizar posição do cursor baseado no joystick direito (gamepad device 0)
+	var right_stick_x = Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
+	var right_stick_y = Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+	
+	# Aplicar deadzone
+	if abs(right_stick_x) > 0.1:
+		# Mover o cursor baseado no joystick, com velocidade de 400 pixels/sec
+		gamepad_cursor_pos.x += right_stick_x * 400 * get_physics_process_delta_time()
+	
+	if abs(right_stick_y) > 0.1:
+		gamepad_cursor_pos.y += right_stick_y * 400 * get_physics_process_delta_time()
+	
+	# Limitar o cursor ao viewport
+	var viewport_size = get_viewport_rect().size
+	gamepad_cursor_pos.x = clamp(gamepad_cursor_pos.x, 0, viewport_size.x)
+	gamepad_cursor_pos.y = clamp(gamepad_cursor_pos.y, 0, viewport_size.y)
+	
+
+func _process_gamepad_interactions() -> void:
+	# Verificar se RT ou LT está pressionado (são eixos analógicos, não botões)
+	var rt_down = Input.get_joy_axis(0, JOY_AXIS_TRIGGER_RIGHT) > 0.5
+	var lt_down = Input.get_joy_axis(0, JOY_AXIS_TRIGGER_LEFT) > 0.5
+	
+	var rt_just_pressed = rt_down and not prev_rt_pressed
+	var lt_just_pressed = lt_down and not prev_lt_pressed
+	
+	prev_rt_pressed = rt_down
+	prev_lt_pressed = lt_down
+	
+	# Se RT ou LT foi pressionado, simular clique do mouse
+	if rt_just_pressed or lt_just_pressed:
+		var mouse_event = InputEventMouseButton.new()
+		mouse_event.button_index = MOUSE_BUTTON_LEFT
+		mouse_event.pressed = true
+		mouse_event.button_mask = MOUSE_BUTTON_MASK_LEFT
+		mouse_event.position = gamepad_cursor_pos
+		get_tree().root.push_input(mouse_event)
+		# Registrar tentativa de agarrar; só ficará verdadeiro se _input aceitar
+		gamepad_grabbed_item = null
+	
+	# Se RT ou LT foi libertado, simular soltar do mouse
+	if gamepad_grabbed_item and not rt_down and not lt_down:
+		var mouse_event = InputEventMouseButton.new()
+		mouse_event.button_index = MOUSE_BUTTON_LEFT
+		mouse_event.pressed = false
+		mouse_event.button_mask = 0
+		mouse_event.position = gamepad_cursor_pos
+		get_tree().root.push_input(mouse_event)
+		gamepad_grabbed_item = null
+		gamepad_dragging = false
+		dragging = false
+	
+	# Se estiver a arrastar com gamepad, processar movimento
+	if gamepad_dragging:
+		var motion_event = InputEventMouseMotion.new()
+		motion_event.position = gamepad_cursor_pos
+		motion_event.relative = Vector2.ZERO
+		get_tree().root.push_input(motion_event)
+	
+	# Verificar se X foi pressionado para ativar o item
+	var x_down = Input.is_joy_button_pressed(0, JOY_BUTTON_X)
+	var x_just_pressed = x_down and not prev_x_pressed
+	prev_x_pressed = x_down
+	if x_just_pressed and gamepad_dragging:
+		_activate_item_gamepad()
+
+func _get_item_at_position(pos: Vector2) -> Node2D:
+	# Encontrar o item na posição especificada
+	# Procurar todos os nodes de item_fall na cena (função estática)
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return null
+	
+	# Procurar recursivamente todos os items
+	var items_at_pos = []
+	_find_items_in_tree(scene_root, items_at_pos, pos)
+	
+	# Se há múltiplos items, pegar o que está por cima (índice maior na árvore)
+	if items_at_pos.size() > 0:
+		items_at_pos.sort_custom(func(a, b): return a.get_index() < b.get_index())
+		if randf() < 0.01:
+			print("✅ Encontrados ", items_at_pos.size(), " items em ", pos)
+		return items_at_pos[-1]
+	
+	return null
+
+func _find_items_in_tree(node: Node, items_list: Array, pos: Vector2) -> void:
+	# Verificar se este node é um item_fall
+	if node.get_script() == load("res://item_fall.gd"):
+		if node.has_node("Sprite2D"):
+			var item_sprite = node.get_node("Sprite2D")
+			if item_sprite.texture != null:
+				# Calcular o retângulo global do sprite
+				var sprite_size = item_sprite.texture.get_size() * item_sprite.scale
+				var sprite_global_pos = item_sprite.global_position - sprite_size / 2
+				var sprite_rect = Rect2(sprite_global_pos, sprite_size)
+				
+				if sprite_rect.has_point(pos):
+					items_list.append(node)
+					if randf() < 0.01:
+						print("Item: ", node.name, " at ", sprite_global_pos, " Size: ", sprite_size, " CONTAINS ", pos)
+	
+	# Procurar recursivamente em filhos
+	for child in node.get_children():
+		_find_items_in_tree(child, items_list, pos)
+
+func _activate_item_gamepad() -> void:
+	# Ativar o item que está sendo arrastado pelo gamepad (botão X)
+	if sprite.texture:
+		var path: String = sprite.texture.resource_path
+		# Extintor -> fogo
+		if path == "res://Imagens/Objetos/Extintor.png":
+			sprite.texture = fire_texture
+			tex_index = -1
+			_play_random_object_sound()
+			_multiply_fire_on_side()
+			_add_interaction_points()
+		# Comando -> troca cenário
+		elif path == "res://Imagens/Objetos/comando.png":
+			var scene_root: Node = get_tree().get_current_scene()
+			var scenario_node: Node = null
+			if scene_root:
+				scenario_node = scene_root.find_child("Scenario", true, false)
+			if scenario_node and scenario_node is Sprite2D:
+				var scenario_sprite: Sprite2D = scenario_node as Sprite2D
+				current_cenario_index = (current_cenario_index + 1) % cenario_textures.size()
+				scenario_sprite.texture = cenario_textures[current_cenario_index]
+				_play_random_object_sound()
+			_add_interaction_points()
+		# Pa -> cria buraco e suga objetos
+		elif path == "res://Imagens/Objetos/Pa.png":
+			_create_hole_and_suck_objects()
+			_play_random_object_sound()
+			_add_interaction_points()
+		# Aspirador -> remove objetos próximos
+		elif path == "res://Imagens/Objetos/aspirador.png":
+			_remove_nearby_objects()
+			_play_random_object_sound()
+			_add_interaction_points()
+		# Camara -> mostra popup e tira foto
+		elif path == "res://Imagens/Objetos/camara.png":
+			_handle_camera_interaction()
+
+func _draw_gamepad_cursor(control: Control) -> void:
+	# Verificar se há um item sob o cursor
+	var item_at_cursor = gamepad_grabbed_item if gamepad_grabbed_item else null
+	
+	# Determinar cor do cursor
+	var cursor_color: Color
+	var cursor_radius: float
+	
+	if gamepad_grabbed_item != null:
+		# Verde quando agarrando
+		cursor_color = Color.GREEN
+		cursor_radius = 15.0
+	elif item_at_cursor != null:
+		# Vermelho quando passa por cima de um item
+		cursor_color = Color.RED
+		cursor_radius = 12.0
+	else:
+		# Amarelo quando não há item sob o cursor
+		cursor_color = Color.YELLOW
+		cursor_radius = 10.0
+	
+	# Desenhar círculo exterior
+	control.draw_circle(Vector2(20, 20), cursor_radius, cursor_color)
+	
+	# Desenhar ponto central
+	control.draw_circle(Vector2(20, 20), 3.0, Color.WHITE)
+
+# ===================== GAMEPAD METHODS =====================
+func gamepad_grab() -> void:
+	"""Inicia o drag do item via gamepad"""
+	if is_hole:
+		return
+	dragging = true
+	var screen_mid = get_viewport_rect().size.x / 2
+	prev_side_left = global_position.x < screen_mid
+
+func gamepad_release() -> void:
+	"""Termina o drag do item via gamepad"""
+	dragging = false
+
+func gamepad_drag(world_pos: Vector2) -> void:
+	"""Move o item para seguir o cursor do gamepad"""
+	if dragging:
+		# Move diretamente para a posição do cursor
+		global_position = world_pos
+		
+		# Verifica se cruzou o meio da tela enquanto segurado
+		var screen_mid = get_viewport_rect().size.x / 2
+		var now_left = global_position.x < screen_mid
+		if now_left != prev_side_left:
+			# cruzou — troca textura para a próxima
+			if object_textures.size() > 0:
+				tex_index = (tex_index + 1) % object_textures.size()
+				sprite.texture = object_textures[tex_index]
+			# Tocar som de achievement
+			_play_random_achievement_sound()
+			prev_side_left = now_left
+
+func gamepad_activate() -> void:
+	"""Ativa o item (equivalente a pressionar X)"""
+	if sprite.texture:
+		var path: String = sprite.texture.resource_path
+		# Extintor -> fogo
+		if path == "res://Imagens/Objetos/Extintor.png":
+			sprite.texture = fire_texture
+			tex_index = -1
+			# Tocar som aleatório
+			_play_random_object_sound()
+			# Multiplicar fogo no mesmo lado da tela
+			_multiply_fire_on_side()
+			# Adicionar pontos
+			_add_interaction_points()
+		# Comando -> troca cenário de cenario1 para cenario2
+		elif path == "res://Imagens/Objetos/comando.png":
+			# Procura o Sprite2D chamado "Scenario" dentro da cena atual
+			var scene_root: Node = get_tree().get_current_scene()
+			var scenario_node: Node = null
+			if scene_root:
+				# Godot 4: usar find_child(nome, recursive=true, owned=true)
+				scenario_node = scene_root.find_child("Scenario", true, false)
+			if scenario_node and scenario_node is Sprite2D:
+				var scenario_sprite: Sprite2D = scenario_node as Sprite2D
+				# Ciclar para o próximo cenário
+				current_cenario_index = (current_cenario_index + 1) % cenario_textures.size()
+				scenario_sprite.texture = cenario_textures[current_cenario_index]
+				# Tocar som aleatório
+				_play_random_object_sound()
+			# Adicionar pontos
+			_add_interaction_points()
+		# Pa -> cria buraco e suga objetos para o outro lado
+		elif path == "res://Imagens/Objetos/Pa.png":
+			_create_hole_and_suck_objects()
+			# Tocar som aleatório
+			_play_random_object_sound()
+			# Adicionar pontos
+			_add_interaction_points()
+		# Aspirador -> remove objetos próximos
+		elif path == "res://Imagens/Objetos/aspirador.png":
+			_remove_nearby_objects()
+			# Tocar som aleatório
+			_play_random_object_sound()
+			# Adicionar pontos
+			_add_interaction_points()
+		# Camara -> mostra popup de permissão e tira foto
+		elif path == "res://Imagens/Objetos/camara.png":
+			_handle_camera_interaction()
+		# Pedra (rock) -> remove do jogo
+		elif path == "res://Imagens/Pedra.png":
+			queue_free()
+		# Roleta (spinner) -> múltiplos objetos aparecem
+		elif path == "res://Imagens/roleta.png":
+			var object_rock_parent = get_parent()
+			if object_rock_parent and object_rock_parent.has_method("_spawn_single_item"):
+				object_rock_parent._spawn_single_item()

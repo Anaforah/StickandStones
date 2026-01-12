@@ -21,15 +21,25 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
-	# Handle jump.
-	if Input.is_action_just_pressed("p2_jump") and is_on_floor():
+	# Handle jump from keyboard or gamepad
+	var jump_pressed = Input.is_action_just_pressed("p2_jump")
+	# Check for gamepad jump (left stick up)
+	var gamepad_left_y = Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
+	if not jump_pressed and gamepad_left_y < -0.8 and is_on_floor():
+		jump_pressed = true
+	
+	if jump_pressed and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 		if sprite:
 			sprite.texture = MAN_JUMP_TEX
 
 	# Get the input direction and handle the movement/deceleration.
-	# As good practice, you should replace UI actions with custom gameplay actions.
+	# Use keyboard input or gamepad left stick
 	var direction := Input.get_axis("p2_move_left", "p2_move_right")
+	# Gamepad left stick horizontal input (JOY_AXIS_LEFT_X)
+	var gamepad_direction = Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
+	if abs(gamepad_direction) > 0.2:  # Deadzone of 0.2
+		direction = gamepad_direction
 	if direction:
 		velocity.x = direction * SPEED
 		# Animate walking when on the floor
