@@ -11,6 +11,7 @@ var side := ""
 var initial_position: Vector2 = Vector2.ZERO  # Guardar posição inicial para fixes de drag
 var prev_q_pressed := false
 var prev_o_pressed := false
+var prev_y_gamepad := false
 
 var achievement_sounds: Array[AudioStream] = []
 var object_textures: Array[Texture2D] = []
@@ -92,27 +93,32 @@ func _input(event):
 
 
 func _process(_delta):
-	# Ignorar drag do mouse se gamepad está em controle
-	if dragging and not gamepad_dragging:
-		var mouse_pos = get_global_mouse_position()
-		
-		# Check for throw action (Q for Player 1, O for Player 2)
-		var screen_mid = get_viewport_rect().size.x / 2
-		var is_left = sprite_right.global_position.x < screen_mid if sprite_right.visible else sprite_left.global_position.x < screen_mid
-		
+	# Verificar throw para ambos mouse e gamepad
+	var screen_mid = get_viewport_rect().size.x / 2
+	var is_left = sprite_right.global_position.x < screen_mid if sprite_right.visible else sprite_left.global_position.x < screen_mid
+	
+	# Check for throw action (Q for Player 1, O/Y-gamepad for Player 2)
+	if dragging or gamepad_dragging:
 		var q_down = Input.is_key_pressed(KEY_Q)
 		var q_just_pressed = q_down and not prev_q_pressed
 		prev_q_pressed = q_down
 		
+		# Player 2: tecla O ou botão Y do gamepad
 		var o_down = Input.is_key_pressed(KEY_O)
-		var o_just_pressed = o_down and not prev_o_pressed
-		prev_o_pressed = o_down
+		var y_gamepad = Input.is_joy_button_pressed(0, JOY_BUTTON_Y)
+		var o_or_y = o_down or y_gamepad
+		var o_just_pressed = o_or_y and not prev_o_pressed
+		prev_o_pressed = o_or_y
 		
 		var should_throw = (is_left and q_just_pressed) or (not is_left and o_just_pressed)
 		
 		if should_throw:
 			_throw_rock(is_left)
 			return
+	
+	# Ignorar drag do mouse se gamepad está em controle
+	if dragging and not gamepad_dragging:
+		var mouse_pos = get_global_mouse_position()
 		
 		if not switched:
 			# Movimento normal antes da troca
@@ -139,6 +145,7 @@ func _process(_delta):
 		# Reset flags quando não está arrastando
 		prev_q_pressed = false
 		prev_o_pressed = false
+		prev_y_gamepad = false
 
 
 func _check_switch(mouse_pos: Vector2) -> void:
