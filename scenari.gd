@@ -1,5 +1,7 @@
 extends Node2D
 
+var settings_popup_instance = null
+
 func _ready():
 	print("===== Árvore de Nodes na execução =====")
 	_print_tree(self, 0)
@@ -7,6 +9,10 @@ func _ready():
 	# Adicionar controlador de cursor do gamepad (segundo rato)
 	var gp_cursor = load("res://gamepad_cursor.gd").new()
 	add_child(gp_cursor)
+	
+	# Conectar botão de settings
+	var settings_button = $GlobalScore/SettingsButton
+	settings_button.pressed.connect(_on_settings_pressed)
 
 func _print_tree(node, indent):
 	var prefix := ""
@@ -69,3 +75,11 @@ func _do_player_respawn(player_parent, player_name: String, original_texture: Te
 	var target_parent = player_parent if is_instance_valid(player_parent) else self
 	target_parent.add_child(new_player)
 	print("✅ ", player_name, " respawned at position: ", new_player.position)
+
+func _on_settings_pressed() -> void:
+	if settings_popup_instance == null or not is_instance_valid(settings_popup_instance):
+		settings_popup_instance = load("res://settings_popup.tscn").instantiate()
+		add_child(settings_popup_instance)
+
+func _on_popup_closed() -> void:
+	settings_popup_instance = null

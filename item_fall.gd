@@ -23,6 +23,28 @@ var achievement_sounds: Array[AudioStream] = []
 var audio_player: AudioStreamPlayer2D = null
 var prev_p_pressed := false
 
+# Posições originais da barreira central (para reset após alavanca)
+var middle_collision_default_local_x = null
+var middle_sprite_default_local_x = null
+
+func _cache_middle_defaults() -> void:
+	# Garante que as posições originais do retângulo central estão guardadas (em coordenadas locais)
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return
+
+	if middle_collision_default_local_x == null:
+		var middle_collision: CollisionShape2D = scene_root.find_child("Centered_Wall", true, false)
+		if middle_collision:
+			middle_collision_default_local_x = middle_collision.position.x
+			print("🔍 Cached Centered_Wall default local x: ", middle_collision_default_local_x)
+
+	if middle_sprite_default_local_x == null:
+		var middle_sprite: Sprite2D = scene_root.get_node_or_null("StaticBody2D/Node/Sprite2D")
+		if middle_sprite:
+			middle_sprite_default_local_x = middle_sprite.position.x
+			print("🔍 Cached middle sprite default local x: ", middle_sprite_default_local_x)
+
 # Dragging
 var dragging := false
 var drag_offset := Vector2.ZERO
@@ -60,6 +82,9 @@ func _ready():
 	# inicializa prev_side_left com base na posição inicial
 	var screen_mid = get_viewport_rect().size.x / 2
 	prev_side_left = global_position.x < screen_mid
+
+	# Guardar posições originais do retângulo central
+	_cache_middle_defaults()
 
 func _load_object_sounds():
 	var dir := DirAccess.open("res://Sons/Objetos")
@@ -187,6 +212,9 @@ func _process(delta):
 				# Camara -> mostra popup de permissão e tira foto
 				elif path == "res://Imagens/Objetos/camara.png":
 					_handle_camera_interaction()
+				# Alavanca -> estica e desloca o retângulo central, explodindo o outro jogador
+				elif path == "res://Imagens/Objetos/alavanca.png":
+					_handle_lever_interaction()
 		var mouse_pos = get_global_mouse_position()
 		global_position = mouse_pos + drag_offset
 
@@ -1132,6 +1160,125 @@ func _fallback_viewport_capture():
 	else:
 		print("⚠ Erro ao capturar imagem")
 
+func _handle_lever_interaction() -> void:
+	# Estica a alavanca, move a barreira central para o lado oposto e explode o adversário
+	if not sprite:
+		return
+
+	print("🔨🔨🔨 LEVER INTERACTION STARTED 🔨🔨🔨")
+	_cache_middle_defaults()
+
+	var screen_mid = get_viewport_rect().size.x / 2.0
+	var lever_is_left = global_position.x < screen_mid
+
+	var original_scale = sprite.scale
+	var stretched_scale = original_scale
+	stretched_scale.x = max(original_scale.x * 6.0, original_scale.x + 2.0)
+
+	var tween = create_tween()
+	tween.tween_property(sprite, "scale:x", stretched_scale.x, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "scale:x", original_scale.x, 0.25).set_delay(0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	print("✅ Calling shift...")
+	await _shift_middle_wall_to_opposite_side(lever_is_left)
+	print("✅ Shift done, now calling explode...")
+	await _explode_player_on_opposite_side(lever_is_left)
+	print("✅ Calling reset...")
+	await _reset_middle_wall_position()
+	print("✅ Reset done!")
+	_play_random_object_sound()
+	_add_interaction_points()
+	print("🔨🔨🔨 LEVER INTERACTION FINISHED 🔨🔨🔨")
+
+func _shift_middle_wall_to_opposite_side(lever_is_left: bool) -> void:
+	# Move o retângulo central (Sprite + colisão) para o lado oposto da alavanca
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return
+
+	var middle_collision: CollisionShape2D = scene_root.find_child("Centered_Wall", true, false)
+	var middle_sprite: Sprite2D = scene_root.get_node_or_null("StaticBody2D/Node/Sprite2D")
+
+	var duration = 0.4
+	var shift_amount = 300.0  # deslocar 300 pixels na posição local
+	var target_local_x_collision = middle_collision_default_local_x if middle_collision_default_local_x != null else 0.0
+	var target_local_x_sprite = middle_sprite_default_local_x if middle_sprite_default_local_x != null else 0.0
+
+	if lever_is_left:
+		target_local_x_collision += shift_amount
+		target_local_x_sprite += shift_amount
+	else:
+		target_local_x_collision -= shift_amount
+		target_local_x_sprite -= shift_amount
+
+	var tweens_done = 0
+	var total_tweens = 0
+
+	if middle_collision:
+		total_tweens += 1
+		var tween_collision = middle_collision.create_tween()
+		tween_collision.tween_property(middle_collision, "position:x", target_local_x_collision, duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_collision.finished.connect(func(): tweens_done += 1)
+
+	if middle_sprite:
+		total_tweens += 1
+		var tween_sprite = middle_sprite.create_tween()
+		tween_sprite.tween_property(middle_sprite, "position:x", target_local_x_sprite, duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_sprite.finished.connect(func(): tweens_done += 1)
+
+	# Wait for shift tweens to finish
+	while tweens_done < total_tweens:
+		await get_tree().process_frame
+
+func _reset_middle_wall_position() -> void:
+	# Reposiciona o retângulo central para a posição original, se conhecida
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return
+
+	var middle_collision: CollisionShape2D = scene_root.find_child("Centered_Wall", true, false)
+	var middle_sprite: Sprite2D = scene_root.get_node_or_null("StaticBody2D/Node/Sprite2D")
+	var duration = 0.35
+	var target_x_collision = middle_collision_default_local_x if middle_collision_default_local_x != null else 0.0
+	var target_x_sprite = middle_sprite_default_local_x if middle_sprite_default_local_x != null else 642.5
+
+	var tweens_done = 0
+	var total_tweens = 0
+
+	if middle_collision:
+		total_tweens += 1
+		var tween_collision = middle_collision.create_tween()
+		tween_collision.tween_property(middle_collision, "position:x", target_x_collision, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween_collision.finished.connect(func(): tweens_done += 1)
+
+	if middle_sprite:
+		total_tweens += 1
+		var tween_sprite = middle_sprite.create_tween()
+		tween_sprite.tween_property(middle_sprite, "position:x", target_x_sprite, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween_sprite.finished.connect(func(): tweens_done += 1)
+
+	# Wait for all tweens to finish
+	while tweens_done < total_tweens:
+		await get_tree().process_frame
+
+func _explode_player_on_opposite_side(lever_is_left: bool) -> void:
+	# Explode o jogador que está do lado contrário à alavanca
+	var scene_root = get_tree().get_current_scene()
+	if not scene_root:
+		return
+
+	var player_left = scene_root.find_child("Player 1", true, false)
+	var player_right = scene_root.find_child("Player 2", true, false)
+	var target_player: Node2D = null
+
+	if lever_is_left:
+		target_player = player_right
+	else:
+		target_player = player_left
+
+	if target_player:
+		await _apply_explosion_to_player(target_player)
+
 func _explode_other_player():
 	# Determinar qual lado está o objeto (câmara)
 	var screen_mid = get_viewport_rect().size.x / 2
@@ -1302,6 +1449,9 @@ func _activate_item_gamepad() -> void:
 		# Camara -> mostra popup e tira foto
 		elif path == "res://Imagens/Objetos/camara.png":
 			_handle_camera_interaction()
+		# Alavanca -> efeito de deslocar barreira e explodir o adversário
+		elif path == "res://Imagens/Objetos/alavanca.png":
+			_handle_lever_interaction()
 
 func _draw_gamepad_cursor(control: Control) -> void:
 	# Verificar se há um item sob o cursor
@@ -1417,3 +1567,6 @@ func gamepad_activate() -> void:
 			var object_rock_parent = get_parent()
 			if object_rock_parent and object_rock_parent.has_method("_spawn_single_item"):
 				object_rock_parent._spawn_single_item()
+		# Alavanca -> desloca a barreira central e explode o outro jogador
+		elif path == "res://Imagens/Objetos/alavanca.png":
+			_handle_lever_interaction()

@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://settings_popup.gd" id="1_5ovxi"]
+[ext_resource type="Texture2D" uid="uid://dpm2o6pjvk4g2" path="res://Imagens/PlayerSettings.png" id="2_settings"]
 
 [sub_resource type="StyleBoxFlat" id="PanelStyle"]
 bg_color = Color(0.2, 0.2, 0.2, 0.95)
@@ -10,129 +11,80 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 
-[node name="SettingsPopup" type="Control"]
+[node name="SettingsPopup" type="CanvasLayer"]
+layer = 100
+
+[node name="Control" type="Control" parent="."]
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
+offset_left = -400.0
 offset_top = -250.0
-offset_right = 300.0
+offset_right = 390.0
 offset_bottom = 250.0
 script = ExtResource("1_5ovxi")
 
-[node name="Panel" type="PanelContainer" parent="."]
+[node name="Panel" type="PanelContainer" parent="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_styles/panel = SubResource("PanelStyle")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/Panel"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 margin_left = 16.0
-margin_top = 16.0
+margin_top = 8.0
 margin_right = -16.0
 margin_bottom = -16.0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="Control/Panel/VBoxContainer"]
 size_flags_vertical = 3
 
-[node name="ContentVBox" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer"]
+[node name="ContentVBox" type="VBoxContainer" parent="Control/Panel/VBoxContainer/ScrollContainer"]
 size_flags_horizontal = 3
-separation = 12
+separation = 0
 
-[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+[node name="HeaderHBox" type="HBoxContainer" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/HeaderHBox"]
 text = "Controls"
 theme_override_font_sizes/font_size = 32
 horizontal_alignment = 1
-
-[node name="ControlsContainer" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
-alignment = 1
-separation = 48
-custom_minimum_size = Vector2(0, 180)
-
-[node name="LeftSpacer" type="Control" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer"]
-size_flags_horizontal = 1
-custom_minimum_size = Vector2(100, 0)
-
-[node name="Player1Column" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer"]
 size_flags_horizontal = 3
-separation = 6
 
-[node name="Player1Label" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player1Column"]
-text = "Player 1"
+[node name="CloseTopButton" type="Button" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/HeaderHBox"]
+text = "X"
 theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 0.647, 0, 1)
+custom_minimum_size = Vector2(40, 40)
 
-[node name="Player1Move" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player1Column"]
-text = "A - Move Left"
-theme_override_font_sizes/font_size = 14
+[node name="ControlsImageContainer" type="CenterContainer" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+custom_minimum_size = Vector2(0, 350)
+margin_bottom = -30
 
-[node name="Player1MoveRight" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player1Column"]
-text = "D - Move Right"
-theme_override_font_sizes/font_size = 14
+[node name="ControlsImage" type="TextureRect" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsImageContainer"]
+texture = ExtResource("2_settings")
+expand_mode = 1
+stretch_mode = 4
+custom_minimum_size = Vector2(700, 350)
 
-[node name="Player1Jump" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player1Column"]
-text = "W - Jump"
-theme_override_font_sizes/font_size = 14
-
-[node name="Player1Item" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player1Column"]
-text = "E - Use Item"
-theme_override_font_sizes/font_size = 14
-
-[node name="Player2Column" type="VBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer"]
-size_flags_horizontal = 3
-separation = 6
-
-[node name="Player2Label" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player2Column"]
-text = "Player 2"
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 0.647, 0, 1)
-
-[node name="Player2Move" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player2Column"]
-text = "← - Move Left"
-theme_override_font_sizes/font_size = 14
-
-[node name="Player2MoveRight" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player2Column"]
-text = "→ - Move Right"
-theme_override_font_sizes/font_size = 14
-
-[node name="Player2Jump" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player2Column"]
-text = "↑ - Jump"
-theme_override_font_sizes/font_size = 14
-
-[node name="Player2Item" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer/Player2Column"]
-text = "P - Use Item"
-theme_override_font_sizes/font_size = 14
-
-[node name="RightSpacer" type="Control" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/ControlsContainer"]
-size_flags_horizontal = 1
-custom_minimum_size = Vector2(32, 0)
-
-[node name="MouseLabel" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
-text = "🖱️ - Agarrar itens"
-theme_override_font_sizes/font_size = 14
-horizontal_alignment = 1
-
-[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
-custom_minimum_size = Vector2(0, 10)
-
-[node name="SoundLabel" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+[node name="SoundLabel" type="Label" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox"]
 text = "Sound"
 theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 
-[node name="VolumeContainer" type="HBoxContainer" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+[node name="VolumeContainer" type="HBoxContainer" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox"]
 alignment = 1
 
-[node name="LeftVolumeSpacer" type="Control" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
-custom_minimum_size = Vector2(32, 0)
+[node name="LeftVolumeSpacer" type="Control" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
+custom_minimum_size = Vector2(32, -30)
 
-[node name="VolumeLabel" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
+[node name="VolumeLabel" type="Label" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
 text = "Music:"
 theme_override_font_sizes/font_size = 14
 
-[node name="VolumeSlider" type="HSlider" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
+[node name="VolumeSlider" type="HSlider" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
 custom_minimum_size = Vector2(200, 0)
 size_flags_horizontal = 3
 min_value = -40.0
@@ -140,18 +92,18 @@ max_value = 5.0
 step = 1.0
 value = -15.0
 
-[node name="VolumeValue" type="Label" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
+[node name="VolumeValue" type="Label" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
 text = "0"
 theme_override_font_sizes/font_size = 14
 custom_minimum_size = Vector2(30, 0)
 
-[node name="RightVolumeSpacer" type="Control" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
+[node name="RightVolumeSpacer" type="Control" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox/VolumeContainer"]
 custom_minimum_size = Vector2(32, 0)
 
-[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer/ScrollContainer/ContentVBox"]
+[node name="HSeparator2" type="HSeparator" parent="Control/Panel/VBoxContainer/ScrollContainer/ContentVBox"]
 custom_minimum_size = Vector2(0, 10)
 
-[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="CloseButton" type="Button" parent="Control/Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
 text = "Close"
 theme_override_font_sizes/font_size = 16

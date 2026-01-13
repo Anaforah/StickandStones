@@ -131,6 +131,19 @@ label_settings = SubResource("LabelSettings_score")
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="SettingsButton" type="Button" parent="GlobalScore"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -96.0
+offset_right = 30.0
+offset_bottom = -36.0
+custom_minimum_size = Vector2(60, 60)
+text = "⚙"
+theme_override_font_sizes/font_size = 34
+
 [node name="Scenario" type="Sprite2D" parent="."]
 position = Vector2(214.33334, 124.000015)
 scale = Vector2(0.22379528, 0.22299385)
