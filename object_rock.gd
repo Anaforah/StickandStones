@@ -9,6 +9,8 @@ var gamepad_dragging := false  # Flag separada para drag via gamepad
 var switched := false
 var side := ""
 var initial_position: Vector2 = Vector2.ZERO  # Guardar posição inicial para fixes de drag
+var prev_q_pressed := false
+var prev_o_pressed := false
 
 var achievement_sounds: Array[AudioStream] = []
 var object_textures: Array[Texture2D] = []
@@ -94,6 +96,24 @@ func _process(_delta):
 	if dragging and not gamepad_dragging:
 		var mouse_pos = get_global_mouse_position()
 		
+		# Check for throw action (Q for Player 1, O for Player 2)
+		var screen_mid = get_viewport_rect().size.x / 2
+		var is_left = sprite_right.global_position.x < screen_mid if sprite_right.visible else sprite_left.global_position.x < screen_mid
+		
+		var q_down = Input.is_key_pressed(KEY_Q)
+		var q_just_pressed = q_down and not prev_q_pressed
+		prev_q_pressed = q_down
+		
+		var o_down = Input.is_key_pressed(KEY_O)
+		var o_just_pressed = o_down and not prev_o_pressed
+		prev_o_pressed = o_down
+		
+		var should_throw = (is_left and q_just_pressed) or (not is_left and o_just_pressed)
+		
+		if should_throw:
+			_throw_rock(is_left)
+			return
+		
 		if not switched:
 			# Movimento normal antes da troca
 			if sprite_left.visible:
@@ -115,6 +135,10 @@ func _process(_delta):
 				sprite_right.global_position = mouse_pos
 			else:
 				sprite_left.global_position = mouse_pos
+	else:
+		# Reset flags quando não está arrastando
+		prev_q_pressed = false
+		prev_o_pressed = false
 
 
 func _check_switch(mouse_pos: Vector2) -> void:
@@ -204,6 +228,12 @@ func _spawn_falling_item():
 	# Se encontrou o player, define destino vertical (mesma x do spawn)
 	if target:
 		item.target_position = Vector2(sprite_right.global_position.x, target.global_position.y)
+		# Se é uma pedra, animar arremesso ao chegar ao player
+		if item.has_node("Sprite2D"):
+			var item_sprite = item.get_node("Sprite2D")
+			if item_sprite.texture and item_sprite.texture.resource_path == "res://Imagens/Pedra.png":
+				item.pass_rock_animation = true
+				item.pass_rock_is_left = roleta_x < screen_mid
 	else:
 		# fallback
 		item.target_position = Vector2(sprite_right.global_position.x, sprite_right.global_position.y + 300)
@@ -343,3 +373,92 @@ func gamepad_drag(world_pos: Vector2) -> void:
 func gamepad_activate() -> void:
 	"""Ativa spawn de item ao pressionar X"""
 	_spawn_single_item()
+func _throw_rock(is_left: bool) -> void:
+	"""Arremessa a pedra/roleta para o lado oposto da tela."""
+	if not dragging:
+		return
+	
+	# Stop dragging
+	dragging = false
+	# Reset switched flag para permitir movimento novamente
+	switched = false
+	
+	_animate_throw_rock(is_left)
+
+func _animate_throw_rock(is_left: bool) -> void:
+	"""Anima a pedra/roleta arremessada em um arco para o outro lado."""
+	var viewport_size = get_viewport_rect().size
+	var throw_distance = viewport_size.x  # Distância a percorrer
+	var throw_duration = 1.0  # Tempo em segundos
+	
+	# Se o objeto está no lado esquerdo, arremessa para a direita
+	# Se está no lado direito, arremessa para a esquerda
+	var throw_direction = 1.0 if is_left else -1.0
+	
+	# Determinar qual sprite está visível
+	var active_sprite = sprite_right if sprite_right.visible else sprite_left
+	
+	# Calcular posição final
+	var final_x = active_sprite.global_position.x + (throw_direction * throw_distance)
+	final_x = clamp(final_x, 0, viewport_size.x)
+	
+	# Guardar posição inicial para verificar cruzamento
+	var start_x = active_sprite.global_position.x
+	var screen_mid = viewport_size.x / 2
+	var crossed_mid = false
+	
+	# Criar tween para animar movimento horizontal com arco (movimento de lançamento)
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_QUAD)
+	
+	# Animar X (movimento horizontal)
+	tween.tween_property(active_sprite, "global_position:x", final_x, throw_duration)
+	
+	# Simultâneamente, animar Y (movimento de arco)
+	var arc_tween = create_tween()
+	arc_tween.set_ease(Tween.EASE_IN)
+	arc_tween.set_trans(Tween.TRANS_QUAD)
+	var start_y = active_sprite.global_position.y
+	arc_tween.tween_property(active_sprite, "global_position:y", start_y - 150, throw_duration * 0.5)  # Sobe
+	arc_tween.tween_property(active_sprite, "global_position:y", start_y + 50, throw_duration * 0.5)   # Desce
+	
+	# Criar um timer para verificar cruzamento durante a animação
+	var check_timer = Timer.new()
+	add_child(check_timer)
+	check_timer.wait_time = 0.05  # Verificar a cada 50ms
+	check_timer.timeout.connect(func():
+		var current_x = active_sprite.global_position.x
+		# Verificar se cruzou a metade
+		if not crossed_mid:
+			if (is_left and current_x >= screen_mid) or (not is_left and current_x <= screen_mid):
+				crossed_mid = true
+				# Fazer a troca para roleta (sprite_right sempre)
+				var current_pos = active_sprite.global_position
+				sprite_left.visible = false
+				sprite_right.visible = true
+				sprite_right.global_position = current_pos
+				side = "right" if is_left else "left"
+				switched = true
+				# Tocar som
+				if switch_sound:
+					switch_sound.play()
+				# Tocar som de achievement
+				_play_random_achievement_sound()
+	)
+	check_timer.start()
+	
+	# Limpar timer quando animação terminar
+	tween.finished.connect(func():
+		check_timer.queue_free()
+		# Reset switched para permitir movimento livre novamente
+		switched = false
+	)
+	
+	print("🚀 Pedra/Roleta arremessada: direção=", throw_direction, " destino_x=", final_x)
+
+func _play_random_achievement_sound():
+	if achievement_sounds.size() > 0 and switch_sound:
+		var random_idx = randi() % achievement_sounds.size()
+		switch_sound.stream = achievement_sounds[random_idx]
+		switch_sound.play()

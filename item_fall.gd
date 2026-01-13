@@ -50,6 +50,8 @@ var dragging := false
 var drag_offset := Vector2.ZERO
 var prev_side_left := false
 var is_hole := false  # Flag para indicar se o objeto é um buraco (não interativo)
+var prev_q_pressed := false
+var prev_o_pressed := false
 
 # Gamepad (mantido apenas para compatibilidade; o controle real está em gamepad_cursor.gd)
 static var gamepad_cursor_pos: Vector2 = Vector2.ZERO
@@ -63,6 +65,10 @@ var prev_x_pressed := false
 # Score global
 static var global_score: int = 0
 static var last_gain: int = 0
+
+# Rock pass animation
+var pass_rock_animation := false
+var pass_rock_is_left := false
 
 func _ready():
 	# Carregar todos os cenários disponíveis
@@ -165,6 +171,20 @@ func _process(delta):
 		var is_left = prev_side_left
 		var should_interact = (is_left and Input.is_action_just_pressed("use_item")) or (not is_left and p_just_pressed)
 
+		# Check for throw action (Q for Player 1, O for Player 2)
+		var q_down = Input.is_key_pressed(KEY_Q)
+		var q_just_pressed = q_down and not prev_q_pressed
+		prev_q_pressed = q_down
+		
+		var o_down = Input.is_key_pressed(KEY_O)
+		var o_just_pressed = o_down and not prev_o_pressed
+		prev_o_pressed = o_down
+		
+		var should_throw = (is_left and q_just_pressed) or (not is_left and o_just_pressed)
+		
+		if should_throw:
+			_throw_object(is_left)
+
 		if should_interact:
 			if sprite.texture:
 				var path: String = sprite.texture.resource_path
@@ -233,6 +253,8 @@ func _process(delta):
 
 	# reset do estado de P quando não está a arrastar
 	prev_p_pressed = false
+	prev_q_pressed = false
+	prev_o_pressed = false
 	
 	# Se este objeto é um buraco, verificar colisões com outros objetos
 	if is_hole:
@@ -246,6 +268,10 @@ func _process(delta):
 			# Para no destino vertical e permanece (não é removido)
 			global_position.y = target_position.y
 			arrived = true
+			
+			# Se é uma pedra com animação de passe, fazer arremesso
+			if pass_rock_animation:
+				_animate_throw(pass_rock_is_left)
 	
 	# Verificar colisão com fogo se for fogo
 	if sprite.texture:
@@ -288,21 +314,8 @@ func _update_global_score_label() -> void:
 	var score_label = scene_root.find_child("ScoreLabel", true, false)
 	if score_label and score_label is Label:
 		score_label.text = "Score: %d" % global_score
-		# Animar o score com pulse
-		_animate_score_pulse(score_label)
 		# Mostrar floating text com o ganho
 		_show_point_gain_floating(last_gain)
-
-func _animate_score_pulse(label: Label) -> void:
-	# Anima o score com um scale pulse
-	var original_scale = label.scale
-	var tween = create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(label, "scale", original_scale * 1.2, 0.1)
-	tween.tween_property(label, "modulate:a", 1.0, 0.1)
-	await tween.finished
-	tween = create_tween()
-	tween.tween_property(label, "scale", original_scale, 0.15)
 
 func _show_point_gain_floating(points: int) -> void:
 	# Cria um label flutuante mostrando os pontos ganhos
@@ -1570,3 +1583,74 @@ func gamepad_activate() -> void:
 		# Alavanca -> desloca a barreira central e explode o outro jogador
 		elif path == "res://Imagens/Objetos/alavanca.png":
 			_handle_lever_interaction()
+func _throw_object(is_left: bool) -> void:
+	"""Arremessa o objeto para o lado oposto da tela."""
+	if not dragging:
+		return
+	
+	# Stop dragging
+	dragging = false
+	gamepad_grabbed_item = null
+	gamepad_dragging = false
+	
+	_animate_throw(is_left)
+
+func _animate_throw(is_left: bool) -> void:
+	"""Anima o objeto arremessado em um arco para o outro lado."""
+	var viewport_size = get_viewport_rect().size
+	var throw_distance = viewport_size.x  # Distância a percorrer
+	var throw_duration = 1.0  # Tempo em segundos
+	var screen_mid = viewport_size.x / 2
+	
+	# Se o objeto está no lado esquerdo, arremessa para a direita
+	# Se está no lado direito, arremessa para a esquerda
+	var throw_direction = 1.0 if is_left else -1.0
+	
+	# Calcular posição final
+	var final_x = global_position.x + (throw_direction * throw_distance)
+	final_x = clamp(final_x, 0, viewport_size.x)
+	
+	var crossed_mid = false
+	
+	# Criar tween para animar movimento horizontal com arco (movimento de lançamento)
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_QUAD)
+	
+	# Animar X (movimento horizontal)
+	tween.tween_property(self, "global_position:x", final_x, throw_duration)
+	
+	# Simultâneamente, animar Y (movimento de arco)
+	var arc_tween = create_tween()
+	arc_tween.set_ease(Tween.EASE_IN)
+	arc_tween.set_trans(Tween.TRANS_QUAD)
+	var start_y = global_position.y
+	arc_tween.tween_property(self, "global_position:y", start_y - 150, throw_duration * 0.5)  # Sobe
+	arc_tween.tween_property(self, "global_position:y", start_y + 50, throw_duration * 0.5)   # Desce
+	
+	# Criar um timer para verificar cruzamento durante a animação
+	var check_timer = Timer.new()
+	add_child(check_timer)
+	check_timer.wait_time = 0.05  # Verificar a cada 50ms
+	check_timer.timeout.connect(func():
+		var current_x = global_position.x
+		# Verificar se cruzou a metade
+		if not crossed_mid:
+			if (is_left and current_x >= screen_mid) or (not is_left and current_x <= screen_mid):
+				crossed_mid = true
+				# Trocar textura aleatória
+				if object_textures.size() > 0 and sprite:
+					tex_index = (tex_index + 1) % object_textures.size()
+					sprite.texture = object_textures[tex_index]
+					print("🔄 Textura trocada ao cruzar o meio: índice=", tex_index)
+				# Tocar som de achievement
+				_play_random_achievement_sound()
+	)
+	check_timer.start()
+	
+	# Limpar timer quando animação terminar
+	tween.finished.connect(func():
+		check_timer.queue_free()
+	)
+	
+	print("🚀 Objeto arremessado: direção=", throw_direction, " destino_x=", final_x)
